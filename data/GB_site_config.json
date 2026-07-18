@@ -1,0 +1,36 @@
+{
+  "organization": {
+    "name": "Geet Bahar Musical Group",
+    "founder": "Uttam Kumar",
+    "city": "Deoghar",
+    "state": "Jharkhand",
+    "country": "India",
+    "registrationNumber": "GB-2024-001",
+    "description": "A prominent musical and cultural organization specializing in orchestras, cultural programs, and government awareness initiatives."
+  },
+  "contact": {
+    "phone": ["+91-8765432100"],
+    "email": "info@geetbahar.com",
+    "address": "Deoghar, Jharkhand, India",
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3640.8474...",
+    "whatsapp": "+91-8765432100"
+  },
+  "social": {
+    "facebook": "https://facebook.com/geetbahar",
+    "instagram": "https://instagram.com/geetbahar",
+    "youtube": "https://youtube.com/@geetbahar"
+  },
+  "businessHours": {
+    "mon_fri": "10:00 AM - 6:00 PM",
+    "saturday": "10:00 AM - 4:00 PM",
+    "sunday": "Closed",
+    "holidays": "By appointment"
+  },
+  "hero": {
+    "title": "Geet Bahar Musical Group",
+    "subtitle": "Cultural Excellence for Jharkhand",
+    "backgroundImage": "media/hero.jpg",
+    "ctaButtonText": "Book Now",
+    "ctaButtonLink": "#contact"
+  }
+}

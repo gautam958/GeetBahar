@@ -1,0 +1,82 @@
+{
+  "pages": {
+    "about": {
+      "title": "About Us",
+      "sections": [
+        {
+          "heading": "Our Story",
+          "body": "Geet Bahar Musical Group is a registered and government-approved cultural organization based in Deoghar, Jharkhand. Founded by Uttam Kumar, we have been dedicated to preserving and promoting classical and folk music traditions while adapting to contemporary tastes.",
+          "image": null
+        },
+        {
+          "heading": "Our Mission",
+          "body": "To bring world-class musical performances and cultural awareness programs to every corner of Jharkhand, fostering appreciation for traditional arts while supporting government initiatives in public outreach and social development.",
+          "image": null
+        },
+        {
+          "heading": "Our Experience",
+          "body": "With years of experience in organizing orchestras, cultural festivals, and government awareness programs, we pride ourselves on delivering exceptional performances that engage, educate, and inspire audiences across all demographics.",
+          "image": null
+        }
+      ]
+    },
+    "services": {
+      "title": "Our Services",
+      "intro": "We specialize in large-scale performances, cultural programs, and government initiatives",
+      "services": [
+        {
+          "name": "Shravani Mela Programs",
+          "description": "Grand orchestral performances during the annual Shravani Mela festival, featuring classical and folk music traditions.",
+          "icon": "🎭"
+        },
+        {
+          "name": "Jan Sanchar (Mass Communication)",
+          "description": "Government-approved awareness programs focused on public communication, health, education, and social development.",
+          "icon": "📢"
+        },
+        {
+          "name": "Nukkad Natak (Street Plays)",
+          "description": "Engaging street performances conveying important social messages and government policies to communities.",
+          "icon": "🎪"
+        },
+        {
+          "name": "Private Event Orchestras",
+          "description": "Customized musical performances for weddings, corporate events, celebrations, and private gatherings.",
+          "icon": "🎵"
+        },
+        {
+          "name": "Cultural Training",
+          "description": "Mentorship and training programs for aspiring musicians and performers in traditional and classical arts.",
+          "icon": "👨‍🏫"
+        },
+        {
+          "name": "Event Management",
+          "description": "Complete event management services including sound, lighting, staging, and logistics for cultural programs.",
+          "icon": "🎬"
+        }
+      ]
+    },
+    "faq": [
+      {
+        "question": "How do I book Geet Bahar for an event?",
+        "answer": "You can submit an inquiry through our contact form, email us at info@geetbahar.com, or call us directly. We'll respond within 24 hours with availability and pricing details."
+      },
+      {
+        "question": "What is the minimum duration for a performance?",
+        "answer": "Minimum duration depends on the event type. Private events typically require 2-3 hours, while government programs can be customized. Contact us for specific requirements."
+      },
+      {
+        "question": "Do you provide sound and lighting equipment?",
+        "answer": "Yes, we provide professional sound systems, lighting, and stage setup for most events. Additional charges may apply for specialized requirements."
+      },
+      {
+        "question": "Can you perform at outdoor venues?",
+        "answer": "Absolutely! We have experience with outdoor performances and festivals. We can adapt to various venue conditions with proper planning."
+      },
+      {
+        "question": "Are your rates negotiable for large events?",
+        "answer": "We offer competitive pricing and can discuss package deals for large-scale government programs and events. Contact us for a customized quote."
+      }
+    ]
+  }
+}

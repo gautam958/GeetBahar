@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="hi" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geet Bahar Musical Group — Deoghar, Jharkhand</title>
+<meta name="description" content="Geet Bahar Musical Group — government-empanelled orchestra and cultural troupe from Deoghar, Jharkhand. Shravani Mela performances, Jan Sanchar and Nukkad Natak programs, private events.">
+<link rel="icon" href="assets/logo.svg">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="site-header">
+  <div class="container">
+    <a href="#top" class="brand">
+      <img src="assets/logo.svg" alt="">
+      <span><span class="hi" data-i18n="org.name">गीत बहार संगीत समूह</span></span>
+    </a>
+    <div class="header-controls">
+      <select id="language-select" class="pill-select" onchange="changeLanguage(this.value)">
+        <option value="hi">हिन्दी</option>
+        <option value="en">English</option>
+      </select>
+      <select id="theme-select" class="pill-select" onchange="changeTheme(this.value)">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="savan">Savan</option>
+      </select>
+      <a href="admin.html" class="btn-admin-link" data-i18n="nav.admin">Admin</a>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero" id="top">
+  <div class="container">
+    <div>
+      <span class="hero-eyebrow" data-i18n="hero.eyebrow">Govt. of Jharkhand Empanelled &middot; Est. Deoghar</span>
+      <h1>
+        <span class="hi-line" data-i18n="hero.title_hi">श्रावणी मेला की धुन, हर मंच तक</span>
+        <span data-i18n="hero.title_en">Geet Bahar Musical Group</span>
+      </h1>
+      <p class="lede" data-i18n="hero.lede">Orchestral and folk performances rooted in Deoghar's Shravani Mela, plus government-approved Jan Sanchar and Nukkad Natak outreach programs — carrying rhythm from temple courtyards to district stages across Jharkhand.</p>
+      <div class="hero-actions">
+        <a href="#contact" class="btn btn-primary" data-i18n="hero.cta_primary">Check availability</a>
+        <a href="#gallery" class="btn btn-outline" data-i18n="hero.cta_secondary">Watch performances</a>
+      </div>
+      <div class="hero-substrip">
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="num">1,200+</div><div class="label" data-i18n="hero.stat1">Programs staged</div></div>
+          <div class="hero-stat"><div class="num">18</div><div class="label" data-i18n="hero.stat2">Districts reached</div></div>
+          <div class="hero-stat"><div class="num">24</div><div class="label" data-i18n="hero.stat3">Trained performers</div></div>
+        </div>
+        <!-- Secondary hero photo — uploaded from Admin → Content → Hero images.
+             Hidden until an image is set, so the hero never shows a broken box. -->
+        <div class="hero-secondary-image empty" id="hero-secondary-image">
+          <img id="hero-secondary-img" alt="" style="display:none;">
+        </div>
+      </div>
+    </div>
+    <!-- Main hero photo — uploaded from Admin → Content → Hero images.
+         Falls back to the gradient + taal-strip design below until set. -->
+    <div class="hero-visual" id="hero-visual">
+      <img id="hero-main-img" alt="" style="display:none;">
+      <div class="taal-strip" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><div class="taal-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+
+<!-- ═══════════════ ABOUT ═══════════════ -->
+<section class="section" id="about">
+  <div class="container about-grid">
+    <div>
+      <span class="eyebrow" data-i18n="about.eyebrow">Who we are</span>
+      <p class="about-lead">
+        <span class="hi" data-i18n="about.lead_hi">उत्तम कुमार के नेतृत्व में, संगीत और सामाजिक जागरूकता का संगम</span>
+      </p>
+      <!-- Uttam Kumar's photo — uploaded from Admin → Content → About & Services.
+           Shows a monogram placeholder until a real photo is added. -->
+      <div class="about-photo" id="about-photo">
+        <img id="about-photo-img" alt="Uttam Kumar, founder of Geet Bahar Musical Group" style="display:none;">
+        <div class="about-photo-fallback" id="about-photo-fallback">
+          <span class="about-photo-mono">उ</span>
+          <span class="about-photo-caption">Uttam Kumar<br>Founder &amp; Director</span>
+        </div>
+      </div>
+    </div>
+    <div class="about-body">
+      <p data-i18n="about.p1"><strong>Geet Bahar Musical Group</strong> was founded in Deoghar by Uttam Kumar to keep the region's orchestral and folk traditions performance-ready for both temple festivals and government platforms. The group is registered with the Government of Jharkhand and empanelled for cultural and communication programs.</p>
+      <p data-i18n="about.p2">Every Shravan month, kanwariyas walk through the night toward Baidyanath Dham — Geet Bahar's orchestras have performed alongside that procession for years, timing arrangements to the crowd, the weather, and the mood of a mela that runs on very little sleep and a lot of devotion.</p>
+      <p data-i18n="about.p3">Outside the festival season, the same musicians and actors carry that stagecraft into <strong>Jan Sanchar</strong> mass-communication programs and <strong>Nukkad Natak</strong> street theatre — turning health, education, and civic messages into something a village square will actually stop and watch.</p>
+      <div class="credential-row">
+        <span class="credential-chip" data-i18n="about.chip1">Govt. of Jharkhand Registered</span>
+        <span class="credential-chip" data-i18n="about.chip2">Empanelled — Jan Sanchar</span>
+        <span class="credential-chip" data-i18n="about.chip3">Empanelled — Nukkad Natak</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><div class="taal-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+
+<!-- ═══════════════ SERVICES ═══════════════ -->
+<section class="section section-alt" id="services">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow" data-i18n="services.eyebrow">What we stage</span>
+      <h2 data-i18n="services.title">Six formats, one troupe</h2>
+      <p data-i18n="services.intro">From a two-hour wedding orchestra to a district-wide awareness drive — the same core team adapts the format, not the standard.</p>
+    </div>
+    <div class="services-grid" id="services-grid">
+      <div class="service-card">
+        <span class="service-mark">01</span>
+        <h3 data-i18n="services.s1.name">Shravani Mela Orchestra</h3>
+        <p data-i18n="services.s1.desc">Large-format classical and folk orchestra performed nightly through the Shravan month alongside the kanwariya procession route.</p>
+      </div>
+      <div class="service-card">
+        <span class="service-mark">02</span>
+        <h3 data-i18n="services.s2.name">Jan Sanchar Programs</h3>
+        <p data-i18n="services.s2.desc">Government-approved mass communication performances — health, literacy, and civic-policy messaging staged for open public squares.</p>
+      </div>
+      <div class="service-card">
+        <span class="service-mark">03</span>
+        <h3 data-i18n="services.s3.name">Nukkad Natak</h3>
+        <p data-i18n="services.s3.desc">Street theatre built for a crowd that wasn't planning to stop walking — short, sharp scenes carrying one civic message at a time.</p>
+      </div>
+      <div class="service-card">
+        <span class="service-mark">04</span>
+        <h3 data-i18n="services.s4.name">Private Event Orchestra</h3>
+        <p data-i18n="services.s4.desc">Weddings, inaugurations, and celebrations scored with the same musicians who play the Mela — sized to your venue and guest list.</p>
+      </div>
+      <div class="service-card">
+        <span class="service-mark">05</span>
+        <h3 data-i18n="services.s5.name">Performer Training</h3>
+        <p data-i18n="services.s5.desc">Mentorship for young vocalists and instrumentalists in Deoghar, built around the group's own performance calendar.</p>
+      </div>
+      <div class="service-card">
+        <span class="service-mark">06</span>
+        <h3 data-i18n="services.s6.name">Full Event Production</h3>
+        <p data-i18n="services.s6.desc">Sound, stage, and lighting handled end-to-end, so a district office or a wedding family only has to make one call.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"><div class="taal-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+
+<!-- ═══════════════ GALLERY ═══════════════ -->
+<section class="section" id="gallery">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow" data-i18n="gallery.eyebrow">From the archive</span>
+      <h2 data-i18n="gallery.title">Photos &amp; recordings</h2>
+    </div>
+    <div class="gallery-tabs">
+      <button class="gallery-tab active" data-panel="photos" data-i18n="gallery.tab_photos">Photos</button>
+      <button class="gallery-tab" data-panel="videos" data-i18n="gallery.tab_videos">Videos</button>
+    </div>
+    <div class="gallery-panel active" id="panel-photos"></div>
+    <div class="gallery-panel" id="panel-videos"></div>
+  </div>
+</section>
+
+<div id="lightbox" class="lightbox">
+  <button class="lightbox-close" aria-label="Close">&times;</button>
+  <img id="lightbox-image" src="" alt="">
+</div>
+
+<div class="section-divider"><div class="taal-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+
+<!-- ═══════════════ RATES ═══════════════ -->
+<section class="section section-alt" id="rates">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow" data-i18n="rates.eyebrow">Pricing</span>
+      <h2 data-i18n="rates.title">Private events &amp; government rates</h2>
+    </div>
+    <div class="rates-grid" id="private-rates">
+      <div class="rate-card">
+        <h4 data-i18n="rates.p1.name">Standard</h4>
+        <div class="rate-duration" data-i18n="rates.p1.dur">2 hours</div>
+        <div class="price">₹15,000</div>
+        <ul>
+          <li data-i18n="rates.p1.i1">Orchestra with lead vocals</li>
+          <li data-i18n="rates.p1.i2">Sound system &amp; microphones</li>
+          <li data-i18n="rates.p1.i3">Basic stage lighting</li>
+        </ul>
+      </div>
+      <div class="rate-card featured">
+        <h4 data-i18n="rates.p2.name">Premium</h4>
+        <div class="rate-duration" data-i18n="rates.p2.dur">3 hours</div>
+        <div class="price">₹25,000</div>
+        <ul>
+          <li data-i18n="rates.p2.i1">Full orchestra + folk dancers</li>
+          <li data-i18n="rates.p2.i2">Stage backdrop &amp; decoration</li>
+          <li data-i18n="rates.p2.i3">Event coordination on-site</li>
+        </ul>
+      </div>
+      <div class="rate-card">
+        <h4 data-i18n="rates.p3.name">Deluxe</h4>
+        <div class="rate-duration" data-i18n="rates.p3.dur">4+ hours</div>
+        <div class="price">₹40,000</div>
+        <ul>
+          <li data-i18n="rates.p3.i1">Extended ensemble + guest artists</li>
+          <li data-i18n="rates.p3.i2">Dedicated event manager</li>
+          <li data-i18n="rates.p3.i3">Custom setlist consultation</li>
+        </ul>
+      </div>
+    </div>
+    <div class="govt-note" data-i18n="rates.govt_note">Government rates for Jan Sanchar (₹5,000/program) and Nukkad Natak (₹3,000/program) follow empanelled rates with the Government of Jharkhand. Volume rates available for multi-district drives — contact us for a written quote.</div>
+  </div>
+</section>
+
+<div class="section-divider"><div class="taal-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+
+<!-- ═══════════════ CONTACT ═══════════════ -->
+<section class="section" id="contact">
+  <div class="container contact-grid">
+    <div>
+      <span class="eyebrow" data-i18n="contact.eyebrow">Get in touch</span>
+      <h2 style="margin:10px 0 24px;" data-i18n="contact.title">Tell us about your event</h2>
+      <form id="contact-form">
+        <div class="form-row">
+          <div class="field">
+            <label data-i18n="form.name">Name</label>
+            <input type="text" name="name" required>
+          </div>
+          <div class="field">
+            <label data-i18n="form.phone">Phone</label>
+            <input type="tel" name="phone" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label data-i18n="form.email">Email</label>
+            <input type="email" name="email">
+          </div>
+          <div class="field">
+            <label data-i18n="form.eventDate">Event date</label>
+            <input type="date" name="eventDate">
+          </div>
+        </div>
+        <div class="field">
+          <label data-i18n="form.eventType">Event type</label>
+          <select name="eventType">
+            <option value="wedding" data-i18n="form.wedding">Wedding</option>
+            <option value="govt" data-i18n="form.govt">Government program</option>
+            <option value="corporate" data-i18n="form.corporate">Corporate</option>
+            <option value="other" data-i18n="form.other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label data-i18n="form.message">Message</label>
+          <textarea name="message" placeholder=""></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" data-i18n="buttons.submit">Send inquiry</button>
+        <span id="form-status" class="save-status"></span>
+      </form>
+    </div>
+    <div class="contact-info-card">
+      <div class="contact-info-item">
+        <span class="eyebrow" data-i18n="contact.phone">Phone</span>
+        <p id="contact-phone">+91-87654 32100</p>
+      </div>
+      <div class="contact-info-item">
+        <span class="eyebrow" data-i18n="contact.email">Email</span>
+        <p id="contact-email">info@geetbahar.com</p>
+      </div>
+      <div class="contact-info-item">
+        <span class="eyebrow" data-i18n="contact.address">Address</span>
+        <p id="contact-address" data-i18n="contact.address_val">Deoghar, Jharkhand, India</p>
+      </div>
+      <div class="contact-info-item">
+        <span class="eyebrow" data-i18n="contact.hours">Business hours</span>
+        <p id="contact-hours" data-i18n="contact.hours_val">Mon–Fri, 10 AM – 6 PM</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <span class="footer-brand" data-i18n="org.name">गीत बहार संगीत समूह</span>
+      <div class="social-row">
+        <a href="#" aria-label="Facebook">f</a>
+        <a href="#" aria-label="Instagram">ig</a>
+        <a href="#" aria-label="YouTube">yt</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span data-i18n="footer.tagline">Broadcasting culture across Jharkhand</span>
+      <span>&copy; 2026 Geet Bahar Musical Group</span>
+    </div>
+  </div>
+</footer>
+
+<nav class="taal-nav" id="taal-nav" aria-label="Section navigation"></nav>
+
+<script src="js/config.js"></script>
+<script src="js/i18n-data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/api.js"></script>
+<script src="js/index.js"></script>
+</body>
+</html>

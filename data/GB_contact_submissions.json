@@ -1,0 +1,15 @@
+{
+  "submissions": [
+    {
+      "id": "submission-001",
+      "name": "Rajesh Kumar",
+      "email": "rajesh@example.com",
+      "phone": "+91-9876543210",
+      "eventType": "wedding",
+      "eventDate": "2024-12-15",
+      "message": "Interested in booking for our wedding ceremony. Looking for a 3-hour performance with orchestra and classical music.",
+      "submittedAt": "2024-07-01T14:30:00Z",
+      "status": "new"
+    }
+  ]
+}

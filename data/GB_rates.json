@@ -1,0 +1,100 @@
+{
+  "private": {
+    "title": "Private Event Packages",
+    "intro": "Professional musical performances for weddings, corporate events, celebrations, and private gatherings",
+    "packages": [
+      {
+        "name": "Standard Program",
+        "duration": "2 hours",
+        "basePrice": 15000,
+        "description": "Orchestra with vocals and classical instruments",
+        "inclusions": [
+          "Professional orchestra setup",
+          "Sound system and microphones",
+          "Basic stage lighting",
+          "Trained vocalists and musicians",
+          "Program customization consultation"
+        ]
+      },
+      {
+        "name": "Premium Program",
+        "duration": "3 hours",
+        "basePrice": 25000,
+        "description": "Full orchestra with vocals, dancers, and special effects",
+        "inclusions": [
+          "Full orchestra with expanded ensemble",
+          "Professional sound and lighting system",
+          "Classical and folk dancers",
+          "Stage decoration and backdrops",
+          "Professional event coordination",
+          "Photography and video coverage assistance"
+        ]
+      },
+      {
+        "name": "Deluxe Program",
+        "duration": "4+ hours",
+        "basePrice": 40000,
+        "description": "Complete entertainment package with customization",
+        "inclusions": [
+          "Extended orchestra with special guest artists",
+          "Premium sound, lighting, and visual effects",
+          "Multiple performance categories",
+          "Professional stage management",
+          "Dedicated event manager",
+          "Custom setlist based on preferences",
+          "Full technical support throughout event"
+        ]
+      }
+    ]
+  },
+  "government": {
+    "title": "Government Programs (Empanelled Rates)",
+    "intro": "Approved rates for Jan Sanchar (Mass Communication) and Nukkad Natak (Street Plays) awareness programs",
+    "baseRates": {
+      "janSanchar": {
+        "name": "Jan Sanchar Program",
+        "description": "Mass Communication & Public Awareness Program",
+        "rate": 5000,
+        "unit": "per program",
+        "minDuration": "1 hour",
+        "details": "Suitable for health awareness, education programs, government policy communication"
+      },
+      "nukadNatak": {
+        "name": "Nukkad Natak Program",
+        "description": "Street Play Awareness Program",
+        "rate": 3000,
+        "unit": "per program",
+        "minDuration": "45 minutes",
+        "details": "Engaging street performances for community outreach and social messaging"
+      }
+    },
+    "notes": "Rates are empanelled with Government of Jharkhand. Volume discounts available for multiple programs. Travel costs extra for locations beyond Deoghar district."
+  },
+  "additionalServices": {
+    "soundSystem": {
+      "name": "Professional Sound System",
+      "rate": 2000,
+      "unit": "per event"
+    },
+    "lighting": {
+      "name": "Stage Lighting Setup",
+      "rate": 1500,
+      "unit": "per event"
+    },
+    "stageDecoration": {
+      "name": "Stage Decoration & Backdrop",
+      "rate": 3000,
+      "unit": "per event"
+    },
+    "videoRecording": {
+      "name": "Professional Video Recording",
+      "rate": 2500,
+      "unit": "per event"
+    },
+    "travelCosts": {
+      "name": "Travel & Accommodation (beyond Deoghar)",
+      "rate": 500,
+      "unit": "per km"
+    }
+  }
+}

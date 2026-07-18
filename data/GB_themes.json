@@ -1,0 +1,45 @@
+{
+  "themes": [
+    {
+      "name": "light",
+      "label": "💡 Light Mode",
+      "description": "Clean, bright interface perfect for daytime viewing",
+      "colors": {
+        "primary": "#2C3E50",
+        "accent": "#E74C3C",
+        "background": "#FFFFFF",
+        "text": "#2C3E50",
+        "textLight": "#7F8C8D",
+        "border": "#ECF0F1"
+      }
+    },
+    {
+      "name": "dark",
+      "label": "🌙 Dark Mode",
+      "description": "Easy on the eyes for nighttime browsing",
+      "colors": {
+        "primary": "#ECF0F1",
+        "accent": "#E74C3C",
+        "background": "#1A1A1A",
+        "text": "#ECF0F1",
+        "textLight": "#BDC3C7",
+        "border": "#34495E"
+      }
+    },
+    {
+      "name": "savan",
+      "label": "🎭 Savan Festival",
+      "description": "Festive gold and green theme for special occasions",
+      "colors": {
+        "primary": "#006B3F",
+        "accent": "#FFD700",
+        "background": "#F0F8FF",
+        "text": "#006B3F",
+        "textLight": "#2F5233",
+        "border": "#C8E6C9"
+      }
+    }
+  ],
+  "default": "light",
+  "lastUpdated": "2024-07-01T00:00:00Z"
+}

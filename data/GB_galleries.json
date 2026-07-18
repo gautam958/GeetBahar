@@ -1,0 +1,29 @@
+{
+  "photos": [
+    {
+      "id": "photo-001",
+      "title": "Shravani Mela 2024 - Orchestra Performance",
+      "description": "Grand orchestra performance during the Shravani Mela festival featuring classical instruments and vocal performances",
+      "filename": "placeholder-photo-1.jpg",
+      "uploadedBy": "admin@geetbahar.com",
+      "uploadedAt": "2024-07-01T10:30:00Z",
+      "tags": ["festival", "orchestra", "performance", "shravani"],
+      "category": "Events"
+    }
+  ],
+  "videos": [
+    {
+      "id": "vid-001",
+      "title": "Performance Highlights 2024",
+      "description": "Compilation of recent performances and cultural programs",
+      "filename": "placeholder-video-1.mp4",
+      "thumbnailUrl": "placeholder-thumb-1.jpg",
+      "duration": "5:32",
+      "uploadedBy": "admin@geetbahar.com",
+      "uploadedAt": "2024-07-01T11:00:00Z",
+      "tags": ["highlights", "performance"],
+      "category": "Performances",
+      "youtubeEmbed": null
+    }
+  ]
+}

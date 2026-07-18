@@ -1,0 +1,114 @@
+{
+  "hi": {
+    "org": {
+      "name": "गीत बहार संगीत समूह",
+      "founder": "उत्तम कुमार"
+    },
+    "nav": {
+      "home": "होम",
+      "about": "हमारे बारे में",
+      "services": "सेवाएं",
+      "gallery": "गैलरी",
+      "rates": "मूल्य",
+      "contact": "संपर्क करें",
+      "admin": "Admin"
+    },
+    "hero": {
+      "title": "गीत बहार संगीत समूह",
+      "subtitle": "झारखंड के लिए सांस्कृतिक उत्कृष्टता"
+    },
+    "buttons": {
+      "bookNow": "अभी बुक करें",
+      "learnMore": "और जानें",
+      "submit": "जमा करें"
+    },
+    "services": {
+      "title": "हमारी सेवाएं"
+    },
+    "gallery": {
+      "title": "गैलरी",
+      "photos": "फोटो गैलरी",
+      "videos": "वीडियो गैलरी"
+    },
+    "rates": {
+      "title": "मूल्य सूची",
+      "private": "निजी कार्यक्रम",
+      "govt": "सरकारी कार्यक्रम दर"
+    },
+    "contact": {
+      "title": "संपर्क करें",
+      "phone": "फोन",
+      "email": "ईमेल",
+      "address": "पता",
+      "hours": "व्यावसायिक घंटे"
+    },
+    "form": {
+      "name": "नाम",
+      "email": "ईमेल",
+      "phone": "फोन",
+      "eventType": "कार्यक्रम प्रकार",
+      "eventDate": "कार्यक्रम तारीख",
+      "message": "संदेश",
+      "wedding": "विवाह",
+      "corporate": "कॉर्पोरेट",
+      "govt": "सरकारी कार्यक्रम",
+      "other": "अन्य"
+    }
+  },
+  "en": {
+    "org": {
+      "name": "Geet Bahar Musical Group",
+      "founder": "Uttam Kumar"
+    },
+    "nav": {
+      "home": "Home",
+      "about": "About",
+      "services": "Services",
+      "gallery": "Gallery",
+      "rates": "Pricing",
+      "contact": "Contact",
+      "admin": "Admin"
+    },
+    "hero": {
+      "title": "Geet Bahar Musical Group",
+      "subtitle": "Cultural Excellence for Jharkhand"
+    },
+    "buttons": {
+      "bookNow": "Book Now",
+      "learnMore": "Learn More",
+      "submit": "Submit"
+    },
+    "services": {
+      "title": "Our Services"
+    },
+    "gallery": {
+      "title": "Gallery",
+      "photos": "Photo Gallery",
+      "videos": "Video Gallery"
+    },
+    "rates": {
+      "title": "Pricing",
+      "private": "Private Events",
+      "govt": "Government Program Rates"
+    },
+    "contact": {
+      "title": "Contact Us",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "hours": "Business Hours"
+    },
+    "form": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "eventType": "Event Type",
+      "eventDate": "Event Date",
+      "message": "Message",
+      "wedding": "Wedding",
+      "corporate": "Corporate",
+      "govt": "Government Program",
+      "other": "Other"
+    }
+  }
+}
