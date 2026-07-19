@@ -10,13 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Theme ──────────────────────────────────────────────────────────────
 
 function loadTheme() {
-  const saved = localStorage.getItem('theme') || APP_CONFIG.DEFAULT_THEME;
+  const saved = sessionStorage.getItem('theme') || APP_CONFIG.DEFAULT_THEME;
   setTheme(saved);
 }
 
 function setTheme(name) {
   document.documentElement.setAttribute('data-theme', name);
-  localStorage.setItem('theme', name);
+  sessionStorage.setItem('theme', name);
   const sel = document.getElementById('theme-select');
   if (sel) sel.value = name;
 }
@@ -26,14 +26,14 @@ function changeTheme(name) { setTheme(name); }
 // ── Language ───────────────────────────────────────────────────────────
 
 function loadLanguage() {
-  const saved = localStorage.getItem('language') || APP_CONFIG.DEFAULT_LANGUAGE;
+  const saved = sessionStorage.getItem('language') || APP_CONFIG.DEFAULT_LANGUAGE;
   setLanguage(saved);
 }
 
 function setLanguage(code) {
   if (!['hi', 'en'].includes(code)) code = APP_CONFIG.DEFAULT_LANGUAGE;
   document.documentElement.lang = code;
-  localStorage.setItem('language', code);
+  sessionStorage.setItem('language', code);
   document.querySelectorAll('.lang-toggle-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === code);
   });

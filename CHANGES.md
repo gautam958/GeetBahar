@@ -321,3 +321,87 @@ network proxy blocking font/Google/CDN domains — not app bugs)
 Function's exact behavior beyond the one GET request above. Once you add
 your `GOOGLE_CLIENT_ID`, please do one real click-test of signing in and
 saving something — that's the one path only you can verify end-to-end.
+
+---
+
+## Update: Gallery miscategorization, blank modal, localStorage (again), mobile Google Sign-In
+
+### Videos landing in the Photo tab
+Root cause: the upload code guessed photo-vs-video from the browser's
+reported MIME type (`file.type`). Some video exports (particularly from
+phones) don't report a clean `video/...` type, so they silently fell
+through to "photo." Fixed by adding an explicit **"I'm uploading a: 🖼️
+Photo / 🎬 Video"** toggle above the upload button in Admin → Gallery —
+your selection decides the bucket now, not a guess. Verified with a `.mov`
+test file (the same kind of file that was breaking before): explicitly
+selecting "Video" now correctly puts it in the Videos tab regardless of
+what MIME type the browser reports.
+
+Existing items already miscategorized on your live backend won't fix
+themselves — you'll need to delete those 3 and re-upload them with the
+Video button selected.
+
+### Blank modal / blank thumbnails
+I could not fully diagnose this from here — I don't have real browser
+access to your live site's network requests, and testing your API
+directly from this sandbox isn't equivalent to your actual browser making
+the request (different origin, no CORS context). What I found when
+testing directly:
+
+```
+GET ?type=config  → generic {"service":"Geet Bahar API","status":"running",...} banner
+GET ?type=gallery → same generic banner, not real gallery data
+```
+
+Both requests returning the exact same generic response is a real signal
+worth checking — it usually means a function is returning a default/root
+response rather than dispatching on `type`. But since a server-side fetch
+isn't a browser request, I can't rule out that your Function behaves
+differently for actual same-origin browser calls. **Please check your
+browser's DevTools → Network tab** (F12 → Network, click a broken gallery
+image, look at that request): if it's CORS-blocked or comes back as JSON
+instead of an image, that confirms a backend-side fix is needed on the
+`?type=media` route specifically.
+
+What I fixed on the frontend regardless: broken media no longer fails
+silently. A thumbnail that can't load now shows a visible "Couldn't load
+this file" note instead of empty space, and the modal shows the same
+message instead of appearing blank — so from now on, a real problem will
+look like a real problem, not nothing.
+
+### localStorage — actually removed this time
+You flagged this twice, and you were right both times. `authToken`,
+`visitorId`, `theme`, and `language` all still used `localStorage`.
+Switched all four to `sessionStorage` — cleared the moment the browser
+tab closes, and not the same storage used for actual site content (which
+now comes only from the API, with zero client-side caching of it). If you
+want even `sessionStorage` gone — meaning re-login every single page
+load, and no repeat-visitor detection in analytics — say so and I'll strip
+it entirely; I kept it at session-level because removing it completely
+changes real behavior (you'd need to sign in again on every admin page
+navigation), not because I was ignoring the instruction.
+
+### Mobile Google Sign-In not appearing
+Real bug, not a network problem on your end. The Google script tag loads
+with `async`, which does **not** guarantee it has finished loading by the
+time my code checked for it — a classic race condition, more likely to
+show up on slower mobile connections (as in your screenshot) than on
+desktop wifi. Fixed by polling for up to ~10 seconds before concluding
+it's genuinely blocked, instead of failing on the very first check.
+
+### Verified so far (mock backend, since I can't reach your real Function or Google's servers from here)
+```
+sessionStorage after login: ['authToken']
+localStorage after login:   []          (empty — confirmed)
+
+Uploaded a .mov file with "Video" explicitly selected → Videos tab: 1, Photos tab: 1 (correct split)
+Admin gallery card badges: ['🖼️ Photo', '🎬 Video']   (matches what was actually selected)
+
+Simulated a broken media file:
+  Gallery thumbnail shows error state: True
+  Modal shows error message instead of blank: True
+```
+
+**Still needs your real-browser check:** the DevTools Network-tab test
+above, for the `?type=media` and `?type=gallery` requests on your actual
+deployed site — that's the one thing only you can see from here.

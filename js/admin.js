@@ -2,7 +2,7 @@
 //
 // Live mode only: Google Sign-In is required to reach the admin shell, and
 // every read/write goes through the real Azure Function API. There is no
-// local/demo fallback and no data cached in localStorage — if a request
+// local/demo fallback and no content data cached client-side — if a request
 // fails, the relevant section shows an inline error instead of silently
 // substituting fake content.
 
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function signOut() {
-  localStorage.removeItem('authToken');
+  sessionStorage.removeItem('authToken');
   authToken = null;
   location.reload();
 }
@@ -32,7 +32,7 @@ function initGoogleSignIn() {
   // An existing session should always win — even if GOOGLE_CLIENT_ID is
   // missing right now, someone who already signed in earlier shouldn't get
   // locked out of the panel they were just using.
-  const existing = localStorage.getItem('authToken');
+  const existing = sessionStorage.getItem('authToken');
   if (existing) {
     authToken = existing;
     showAdminShell(parseJwtEmail(existing));
@@ -48,22 +48,33 @@ function initGoogleSignIn() {
     return;
   }
 
-  if (!window.google) {
-    document.getElementById('signin-subtitle').textContent =
-      'Could not load Google Sign-In (the script may be blocked by your network). Please check your connection and reload.';
+  // The Google script tag loads with async/defer, which does NOT guarantee
+  // it has finished by the time DOMContentLoaded fires — this is especially
+  // common on slower mobile connections. Poll for it briefly before
+  // concluding it's actually blocked, instead of failing on the first check.
+  waitForGoogleScript();
+}
+
+function waitForGoogleScript(attempt = 0) {
+  if (window.google?.accounts?.id) {
+    google.accounts.id.initialize({
+      client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredential
+    });
+    google.accounts.id.renderButton(document.getElementById('google-signin-btn'), { theme: 'outline', size: 'large' });
     return;
   }
-
-  google.accounts.id.initialize({
-    client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
-    callback: handleGoogleCredential
-  });
-  google.accounts.id.renderButton(document.getElementById('google-signin-btn'), { theme: 'outline', size: 'large' });
+  if (attempt < 20) { // up to ~10 seconds total, generous for slow mobile networks
+    setTimeout(() => waitForGoogleScript(attempt + 1), 500);
+    return;
+  }
+  document.getElementById('signin-subtitle').textContent =
+    'Could not load Google Sign-In (the script may be blocked by your network). Please check your connection and reload.';
 }
 
 function handleGoogleCredential(response) {
   authToken = response.credential;
-  localStorage.setItem('authToken', authToken);
+  sessionStorage.setItem('authToken', authToken);
   showAdminShell(parseJwtEmail(authToken));
 }
 
@@ -386,9 +397,11 @@ async function loadGallery() {
   }
   grid.innerHTML = items.map(item => `
     <div class="admin-gallery-card">
+      <span class="admin-gallery-badge">${item.kind === 'video' ? '🎬 Video' : '🖼️ Photo'}</span>
       ${item.kind === 'video'
-        ? `<video src="${resolveAdminImageRef(item.filename)}" muted></video>`
-        : `<img src="${resolveAdminImageRef(item.filename)}" alt="${escAttr(item.title || '')}">`}
+        ? `<video src="${resolveAdminImageRef(item.filename)}" muted onerror="this.closest('.admin-gallery-card').classList.add('media-error')"></video>`
+        : `<img src="${resolveAdminImageRef(item.filename)}" alt="${escAttr(item.title || '')}" onerror="this.closest('.admin-gallery-card').classList.add('media-error')">`}
+      <div class="admin-gallery-error-note">Couldn't load — check this file's URL</div>
       <div class="meta">
         <h4>${escapeHtmlAdmin(item.title || 'Untitled')}</h4>
         <small>${item.kind === 'video' ? 'Video' : 'Photo'}</small>
@@ -398,10 +411,23 @@ async function loadGallery() {
   `).join('');
 }
 
+let currentUploadKind = 'photo';
+
+function setUploadKind(kind) {
+  currentUploadKind = kind;
+  document.querySelectorAll('.upload-kind-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.kind === kind));
+  document.getElementById('upload-kind-label').textContent = kind;
+  document.getElementById('file-input').setAttribute('accept', kind === 'video' ? 'video/*' : 'image/*');
+}
+
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
-  const kind = file.type.startsWith('video') ? 'videos' : 'photos';
+  // The person explicitly tells us photo vs video (see setUploadKind above) —
+  // we don't rely on the browser's guessed MIME type here, since some phone
+  // camera exports don't report a usable video/* type and were silently
+  // being filed as photos.
+  const kind = currentUploadKind === 'video' ? 'videos' : 'photos';
   const title = file.name.replace(/\.[^.]+$/, '');
   const grid = document.getElementById('admin-gallery-grid');
 

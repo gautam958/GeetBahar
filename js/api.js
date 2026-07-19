@@ -23,10 +23,10 @@ async function apiCall(type, method = 'GET', data = null, authToken = null, para
 }
 
 function getOrCreateVisitorId() {
-  let id = localStorage.getItem('visitorId');
+  let id = sessionStorage.getItem('visitorId');
   if (!id) {
     id = 'visitor-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random());
-    localStorage.setItem('visitorId', id);
+    sessionStorage.setItem('visitorId', id);
   }
   return id;
 }

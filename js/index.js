@@ -47,11 +47,12 @@ function renderGalleryPanel(panelId, items, kind) {
   panel.innerHTML = items.map((item, i) => {
     const url = resolveImageRef(item.filename);
     const thumb = kind === 'video'
-      ? `<video src="${url}" muted preload="metadata"></video><span class="gallery-play-badge">▶</span>`
-      : `<img src="${url}" alt="${escapeHtml(item.title || '')}" loading="lazy">`;
+      ? `<video src="${url}" muted preload="metadata" onerror="this.closest('.gallery-item').classList.add('media-error')"></video><span class="gallery-play-badge">▶</span>`
+      : `<img src="${url}" alt="${escapeHtml(item.title || '')}" loading="lazy" onerror="this.closest('.gallery-item').classList.add('media-error')">`;
     return `
       <div class="gallery-item" onclick="openMediaModal('${kind}', ${i})">
         ${thumb}
+        <div class="gallery-error-note">Couldn't load this file — check the admin panel</div>
         <div class="gallery-caption">${escapeHtml(item.title || '')}</div>
       </div>
     `;
@@ -85,11 +86,14 @@ function openMediaModal(kind, index) {
   const modal = document.getElementById('lightbox');
   const imgEl = document.getElementById('lightbox-image');
   const videoEl = document.getElementById('lightbox-video');
+  const errorEl = document.getElementById('lightbox-error');
   const url = resolveImageRef(item.filename);
+  errorEl.style.display = 'none';
 
   if (kind === 'video') {
     imgEl.style.display = 'none';
     videoEl.style.display = 'block';
+    videoEl.onerror = () => { videoEl.style.display = 'none'; errorEl.style.display = 'block'; };
     videoEl.src = url;
     videoEl.load();
   } else {
@@ -97,6 +101,7 @@ function openMediaModal(kind, index) {
     videoEl.style.display = 'none';
     videoEl.removeAttribute('src');
     imgEl.style.display = 'block';
+    imgEl.onerror = () => { imgEl.style.display = 'none'; errorEl.style.display = 'block'; };
     imgEl.src = url;
     imgEl.alt = item.title || '';
   }

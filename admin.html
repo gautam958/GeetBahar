@@ -172,9 +172,16 @@
       <div class="panel-head">
         <div><h2>Gallery</h2><p>Upload photos and videos from Mela nights, programs, and private events.</p></div>
       </div>
+
+      <div class="upload-kind-select" role="group" aria-label="What are you uploading?">
+        <span class="field-mini-label" style="margin-right:12px;">I'm uploading a:</span>
+        <button type="button" class="upload-kind-btn active" data-kind="photo" onclick="setUploadKind('photo')">🖼️ Photo</button>
+        <button type="button" class="upload-kind-btn" data-kind="video" onclick="setUploadKind('video')">🎬 Video</button>
+      </div>
+
       <div class="upload-zone" id="upload-zone">
-        <p><strong>Click to choose a file</strong> or drag one here</p>
-        <p style="font-size:0.82rem;margin-top:6px;">JPG, PNG, or MP4 — up to 10 MB</p>
+        <p><strong>Click to choose a <span id="upload-kind-label">photo</span></strong> or drag one here</p>
+        <p style="font-size:0.82rem;margin-top:6px;">JPG/PNG up to 10 MB, or MP4/MOV up to 10 MB</p>
         <input type="file" id="file-input" accept="image/*,video/*" style="display:none;">
       </div>
       <div class="admin-gallery-grid" id="admin-gallery-grid"></div>
