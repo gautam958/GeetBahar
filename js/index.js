@@ -21,7 +21,8 @@ let galleryData = { photos: [], videos: [] };
 
 async function renderGallery() {
   try {
-    galleryData = await apiCall('gallery', 'GET');
+    const raw = await apiCall('gallery', 'GET');
+    galleryData = flattenGalleryResponse(raw);
   } catch (e) {
     console.error('Could not load gallery:', e.message);
     renderGalleryError('panel-photos');

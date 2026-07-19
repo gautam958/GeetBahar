@@ -381,15 +381,17 @@ let cachedGallery = { photos: [], videos: [] };
 
 async function loadGallery() {
   const grid = document.getElementById('admin-gallery-grid');
-  const data = await safeApiGet('gallery', { photos: [], videos: [] });
-  if (data.__error) {
-    grid.innerHTML = `<p style="color:var(--vermilion);">Could not load the gallery — ${escapeHtmlAdmin(data.__error)}</p>`;
+  let raw;
+  try {
+    raw = await apiCall('gallery', 'GET', null, authToken);
+  } catch (e) {
+    grid.innerHTML = `<p style="color:var(--vermilion);">Could not load the gallery — ${escapeHtmlAdmin(e.message)}</p>`;
     return;
   }
-  cachedGallery = data;
+  cachedGallery = flattenGalleryResponse(raw);
   const items = [
-    ...(data.photos || []).map(p => ({ ...p, kind: 'photo' })),
-    ...(data.videos || []).map(v => ({ ...v, kind: 'video' }))
+    ...(cachedGallery.photos || []).map(p => ({ ...p, kind: 'photo' })),
+    ...(cachedGallery.videos || []).map(v => ({ ...v, kind: 'video' }))
   ];
   if (!items.length) {
     grid.innerHTML = '<p style="color:var(--text-soft);">No items yet — upload one above.</p>';
@@ -397,11 +399,13 @@ async function loadGallery() {
   }
   grid.innerHTML = items.map(item => `
     <div class="admin-gallery-card">
-      <span class="admin-gallery-badge">${item.kind === 'video' ? '🎬 Video' : '🖼️ Photo'}</span>
-      ${item.kind === 'video'
-        ? `<video src="${resolveAdminImageRef(item.filename)}" muted onerror="this.closest('.admin-gallery-card').classList.add('media-error')"></video>`
-        : `<img src="${resolveAdminImageRef(item.filename)}" alt="${escAttr(item.title || '')}" onerror="this.closest('.admin-gallery-card').classList.add('media-error')">`}
-      <div class="admin-gallery-error-note">Couldn't load — check this file's URL</div>
+      <div class="admin-gallery-thumb">
+        <span class="admin-gallery-badge">${item.kind === 'video' ? '🎬 Video' : '🖼️ Photo'}</span>
+        ${item.kind === 'video'
+          ? `<video src="${resolveAdminImageRef(item.filename)}" muted onerror="this.closest('.admin-gallery-thumb').classList.add('media-error')"></video>`
+          : `<img src="${resolveAdminImageRef(item.filename)}" alt="${escAttr(item.title || '')}" onerror="this.closest('.admin-gallery-thumb').classList.add('media-error')">`}
+        <div class="admin-gallery-error-note">Couldn't load — check this file's URL</div>
+      </div>
       <div class="meta">
         <h4>${escapeHtmlAdmin(item.title || 'Untitled')}</h4>
         <small>${item.kind === 'video' ? 'Video' : 'Photo'}</small>
@@ -435,10 +439,15 @@ function handleFileUpload(e) {
   reader.onload = async () => {
     try {
       const media = await apiCall('media', 'POST', { filename: file.name, contentType: file.type, dataBase64: reader.result }, authToken);
-      const gallery = await safeApiGet('gallery', { photos: [], videos: [] });
-      const list = gallery[kind] || [];
+      const rawGallery = await apiCall('gallery', 'GET', null, authToken).catch(() => null);
+      const clean = flattenGalleryResponse(rawGallery);
+      const list = clean[kind] || [];
       list.unshift({ id: generateId(kind === 'videos' ? 'video' : 'photo'), title, filename: media.filename, description: '' });
-      await apiCall('gallery', 'POST', { ...gallery, [kind]: list }, authToken);
+      clean[kind] = list;
+      // Always POST a clean, flat {photos, videos} object — never the raw
+      // shape we just read — so this save can't add another layer of
+      // nesting on top of whatever is already stored.
+      await apiCall('gallery', 'POST', { photos: clean.photos, videos: clean.videos }, authToken);
       loadGallery();
     } catch (err) {
       grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Upload failed — ${escapeHtmlAdmin(err.message)}</p>`);
@@ -455,12 +464,13 @@ async function deleteGalleryItem(kind, id) {
     await apiCall('gallery', 'DELETE', null, authToken, `&id=${encodeURIComponent(id)}`);
     loadGallery();
   } catch (err) {
-    // Fall back to a full rewrite of the gallery list minus this item, in
-    // case the backend's DELETE route differs from what's documented.
+    // Some deployments don't support DELETE the same way — fall back to
+    // writing a clean gallery object (from the already-recovered/flattened
+    // data) with this item removed.
     try {
-      const gallery = cachedGallery;
-      gallery[key] = (gallery[key] || []).filter(item => item.id !== id);
-      await apiCall('gallery', 'POST', gallery, authToken);
+      const clean = { photos: [...(cachedGallery.photos || [])], videos: [...(cachedGallery.videos || [])] };
+      clean[key] = clean[key].filter(item => item.id !== id);
+      await apiCall('gallery', 'POST', clean, authToken);
       loadGallery();
     } catch (err2) {
       grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Delete failed — ${escapeHtmlAdmin(err2.message)}</p>`);

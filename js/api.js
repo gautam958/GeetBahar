@@ -22,6 +22,42 @@ async function apiCall(type, method = 'GET', data = null, authToken = null, para
   return response.text();
 }
 
+// ── Gallery data recovery ────────────────────────────────────────────
+//
+// Some deployments have been observed storing gallery data with recursive
+// nesting — each save wraps the *entire* previous gallery blob as a new
+// list item instead of replacing the array. Rather than trust the wrapper
+// structure (photos vs videos keys), this walks the whole response at any
+// depth and recovers real leaf items by their id prefix, which is set
+// once at upload time and stays reliable even if the storage around it
+// gets mangled. Always use this instead of reading .photos/.videos
+// directly on data that came from the API.
+function flattenGalleryResponse(raw) {
+  const photos = [];
+  const videos = [];
+  const seenIds = new Set();
+
+  function isLeafItem(node) {
+    return node && typeof node === 'object' && typeof node.filename === 'string' && typeof node.id === 'string';
+  }
+
+  function walk(node) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (isLeafItem(node)) {
+      if (!seenIds.has(node.id)) {
+        seenIds.add(node.id);
+        (node.id.startsWith('video-') ? videos : photos).push(node);
+      }
+      return; // leaf items shouldn't contain further nested wrappers
+    }
+    Object.values(node).forEach(walk);
+  }
+
+  walk(raw);
+  return { photos, videos };
+}
+
 function getOrCreateVisitorId() {
   let id = sessionStorage.getItem('visitorId');
   if (!id) {

@@ -405,3 +405,92 @@ Simulated a broken media file:
 **Still needs your real-browser check:** the DevTools Network-tab test
 above, for the `?type=media` and `?type=gallery` requests on your actual
 deployed site — that's the one thing only you can see from here.
+
+---
+
+## Update: Real cause found — recursive data corruption, not a display bug
+
+Your screenshot was the key. The Network tab showed the actual live
+`?type=gallery` response, and it's genuinely corrupted: every save appears
+to have wrapped the *entire previous gallery blob* as a single new list
+item instead of replacing the array. So `photos[1]` contains a whole
+earlier copy of the gallery (with its own nested `photos`/`videos` keys
+inside it), `photos[4]` another copy, and so on — real uploaded items end
+up buried at random depths, which is why tabs looked wrong and images
+looked blank (the "items" at the top level usually weren't real leaf
+objects at all).
+
+**I could not confirm whether this is happening server-side or being
+compounded by my own old client code (which read the whole blob, spread
+it, and posted it back — which would make any existing corruption worse
+with every single upload).** I can't test authenticated writes against
+your real backend from here (see below), so instead of chasing the exact
+cause, I made the frontend recover correctly regardless of what's
+actually stored:
+
+**New `flattenGalleryResponse()` function** (in `js/api.js`, shared by both
+pages) walks the response at *any* depth and pulls out real items by their
+`id` prefix (`photo-...` / `video-...`, which I generate at upload time and
+which survives corruption even when the wrapper structure doesn't),
+de-duplicating along the way. Both the public gallery and the admin
+gallery grid now go through this before rendering anything.
+
+I tested this against a structure modeled directly on your screenshot
+(same nesting shape, a video id repeated 6 times across the mess):
+```
+Recovered photos: [photo-1784466604320-td2obo, photo-1784462768697-ytajrk]
+Recovered videos: [video-1784436572711-llf72y]   (deduplicated from 6 copies)
+```
+
+**Uploads and deletes now always write back a clean flat structure** —
+never the raw shape just read — so going forward, saves can't add another
+layer of nesting on top of whatever's already there. Whether this fully
+self-heals your stored data over time depends on how your backend actually
+handles the POST body, which I can't verify (see below) — but display and
+delete will work correctly either way, since the read side no longer
+trusts the wrapper structure at all.
+
+### The missing Delete button
+Separate, simpler bug: my error-overlay for broken media used
+`position: absolute; inset: 0` sized to the *entire card* — which, by
+normal CSS stacking rules, paints on top of the non-positioned `.meta`
+div underneath (title + Delete button) regardless of DOM order. So
+whenever a card hit the "couldn't load" state, the overlay was silently
+covering the Delete button, not removing it. Fixed by wrapping the
+thumbnail and its error state in their own `.admin-gallery-thumb`
+container, completely separate from `.meta` — confirmed with a test: both
+recovered cards now show a visible, clickable Delete button.
+
+### On "bypass admin authentication and test with the live API"
+I looked into this properly and I can't do it, for two separate reasons:
+1. **I can't forge a valid Google sign-in.** Your backend verifies the
+   token's signature against Google's own keys — there's no token I can
+   construct that would pass that check. There's no bypass I have access
+   to that doesn't involve an actual Google account signing in.
+2. **My tools can't reach your backend as a real browser would.** I tried
+   the public (no-auth) `GET ?type=gallery` endpoint directly again just
+   now, and got the same generic service-info response as before —
+   different from what your own browser's Network tab shows for the exact
+   same URL. That mismatch suggests your Function may be branching on
+   something like the Origin header, which my fetch tool doesn't send the
+   same way a real browser does. I can't currently explain that gap, and
+   it means I can't treat my own direct requests as reliable evidence
+   about your live data — your screenshot was more trustworthy than my
+   own fetch, which is an unusual position to be in, but it's the honest
+   one.
+
+Given both of those, the flatten-based recovery above is the most
+reliable fix I can deliver without live authenticated access — it makes
+the site correct regardless of exactly what's happening on the backend.
+
+### What to actually do next
+1. Delete the corrupted items from Admin → Gallery (the recovered/deduped
+   list should make this manageable — you should now see 2-3 real cards
+   instead of 8+ garbled ones).
+2. Re-upload anything you deleted, using the Photo/Video toggle correctly.
+3. If new uploads still come back corrupted after this, the compounding
+   is happening server-side and the `.csx` code's gallery POST handler
+   needs a look — specifically, whatever it does with the request body
+   under `?type=gallery` (it should be *replacing* the stored `photos`/
+   `videos` arrays with what's POSTed, not appending the whole body as one
+   entry).
