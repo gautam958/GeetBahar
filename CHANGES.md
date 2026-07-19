@@ -211,3 +211,113 @@ Reloaded the page → photo still there (confirms it actually saved,
 not just showed a message)
 JS errors: None
 ```
+
+---
+
+## Update: Live backend integration, Google Sign-In, gallery bug fix, and more
+
+### The gallery bug you asked about — found and fixed
+`index.js` was reading a hardcoded sample array (`window.SAMPLE_GALLERY`)
+on every page load, completely ignoring whatever the admin had actually
+saved — in every mode, demo or live. Uploads never had a path to the
+public page at all. That hardcoded array is now deleted entirely; the
+homepage gallery loads only from the live `gallery` API endpoint.
+
+### Backend wired to your real deployment
+`js/config.js` now points at your Azure Function:
+```
+https://communication-fn.azurewebsites.net/api/GeetBahar?code=...
+```
+I confirmed it's reachable (got a valid JSON response). One flag: requesting
+`?type=config` returned a generic service-info banner rather than actual
+config data — that might be normal (nothing saved yet) or might mean your
+deployed function's routing differs slightly from the documented contract.
+Worth a quick check on your end since I can't inspect your actual Azure
+code from here.
+
+### Demo mode and localStorage-for-data — removed
+All of `DEMO_KEYS`, `SEED`, `demoGet`/`demoSet`, the "Continue in Local
+Demo Mode" button, and the demo banner are gone. Every admin load/save now
+calls the real API only. If a request fails, the affected section shows a
+plain-language error message instead of silently showing fake content.
+
+**One thing I kept in localStorage on purpose:** the visitor ID (anonymous,
+used only so analytics can tell repeat visitors from new ones) and the
+signed-in admin's auth token. Neither of these duplicates your actual
+content data — they're just client-side session/identity bits, the same
+way any site would use a cookie. Let me know if you'd rather those go too.
+
+### Google Sign-In — wired, needs one value from you
+The sign-in flow is fully live: real `google.accounts.id` calls, a proper
+JWT decode for the signed-in email, and the admin shell only unlocks after
+a real credential comes back from Google. The one thing I can't supply is
+your **Google OAuth Client ID** — I don't have one, and inventing a value
+would just break sign-in silently. Get one from
+[Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+(OAuth 2.0 Client ID → Web application) and paste it into
+`GOOGLE_CLIENT_ID` in `js/config.js`. Until then, the sign-in screen shows
+a plain-language message explaining exactly this, instead of a broken
+button.
+
+### Image/video modal on the homepage
+Gallery items now render real thumbnails (actual `<img>`/`<video>` tags
+pointed at your uploaded files, not the color-block placeholders from
+before). Clicking a photo opens it full-size in a modal; clicking a video
+opens the same modal with a real, playable `<video>` element — not the
+image element by mistake.
+
+### Language selector → toggle button
+Replaced the हिन्दी/English `<select>` dropdown with a two-segment
+pill toggle (हिं / EN) in the header — same behavior, one click instead
+of opening a dropdown.
+
+### Mobile admin menu
+Found the actual bug: I'd previously written `display: none` on the public
+site's "Admin" link at narrow widths — meaning there was no way to reach
+`admin.html` from a phone at all. That's removed; the link now just
+shrinks to fit. Separately, the admin panel's own tab bar (Content /
+Gallery / Rates / Inquiries / Analytics) is confirmed horizontally
+scrollable with proper touch sizing on mobile.
+
+### How this was tested
+I can't reach your actual Azure Function or Google's OAuth servers from
+this sandbox (its network is locked to a small allowlist that doesn't
+include `azurewebsites.net` or `accounts.google.com` — the one health-check
+fetch I did earlier only worked because you gave me that exact URL
+directly in this conversation). So I built a local mock server that
+implements the same documented contract (GET/POST/DELETE/PATCH across
+config/content/rates/gallery/media/contact_submissions/analytics/visitors),
+pointed a test copy of the frontend at it, and ran it through a headless
+browser:
+
+```
+Signed-in shortcut (simulated session) → admin shell loads: True
+Phone field loaded from API: "+91-87654 32100"      (real API data, not seed)
+Service/package/submission rows all loaded from the mock API correctly
+
+Uploaded a photo + a video via Admin → Gallery
+  Public homepage photo panel items: 1
+  Public homepage video panel items: 1
+  Clicked photo  → modal shows <img>, video element hidden
+  Clicked video  → modal shows <video>, image element hidden
+
+Deleted the uploaded photo → gallery card count 1 → 0
+
+Uploaded hero image + Uttam Kumar's photo → saved →
+  both visible on the public homepage, fallback states hidden
+
+Mobile (375px viewport):
+  Public "Admin" link visible: True
+  Admin tab bar present and sized to viewport: True
+
+Language toggle: clicking EN sets it active, translations apply
+
+JS errors: None (all console noise was 403s from this sandbox's own
+network proxy blocking font/Google/CDN domains — not app bugs)
+```
+
+**What I could NOT test:** the actual Google OAuth popup/consent screen
+(needs `accounts.google.com`, which I can't reach), and your real Azure
+Function's exact behavior beyond the one GET request above. Once you add
+your `GOOGLE_CLIENT_ID`, please do one real click-test of signing in and
+saving something — that's the one path only you can verify end-to-end.

@@ -1,106 +1,17 @@
 // Geet Bahar — Admin panel logic
 //
-// Two modes:
-//  1. Local Demo Mode (default, works with zero setup): data lives in
-//     localStorage, seeded from bundled sample content on first run.
-//  2. Live Mode (once config.js has real API_BASE + GOOGLE_CLIENT_ID):
-//     Google Sign-In gates access, all reads/writes hit the real Azure API.
+// Live mode only: Google Sign-In is required to reach the admin shell, and
+// every read/write goes through the real Azure Function API. There is no
+// local/demo fallback and no data cached in localStorage — if a request
+// fails, the relevant section shows an inline error instead of silently
+// substituting fake content.
 
-const DEMO_KEYS = {
-  siteConfig: 'gb_demo_site_config',
-  pageContent: 'gb_demo_page_content',
-  rates: 'gb_demo_rates',
-  gallery: 'gb_demo_gallery',
-  submissions: 'gb_demo_submissions',
-  visitors: 'gb_demo_visitors',
-  analytics: 'gb_demo_analytics'
-};
-
-const SEED = {
-  siteConfig: {
-    contact: { phone: "+91-87654 32100", email: "info@geetbahar.com", address: "Deoghar, Jharkhand, India" },
-    hero: { title_hi: "गीत बहार संगीत समूह", title_en: "Geet Bahar Musical Group" },
-    businessHours: { mon_fri: "10:00 AM – 6:00 PM", saturday: "10:00 AM – 4:00 PM", sunday: "Closed" },
-    social: { facebook: "https://facebook.com/geetbahar", instagram: "https://instagram.com/geetbahar", youtube: "https://youtube.com/@geetbahar" }
-  },
-  pageContent: {
-    about: {
-      lead: "उत्तम कुमार के नेतृत्व में, संगीत और सामाजिक जागरूकता का संगम",
-      sections: [
-        { heading: "Our story", body: "Geet Bahar Musical Group was founded in Deoghar by Uttam Kumar to keep the region's orchestral and folk traditions performance-ready for both temple festivals and government platforms." },
-        { heading: "Shravani Mela", body: "Every Shravan month, kanwariyas walk through the night toward Baidyanath Dham — Geet Bahar's orchestras have performed alongside that procession for years." },
-        { heading: "Beyond the festival", body: "Outside the festival season, the same musicians and actors carry that stagecraft into Jan Sanchar programs and Nukkad Natak street theatre." }
-      ]
-    },
-    services: {
-      services: [
-        { name: "Shravani Mela Orchestra", description: "Large-format classical and folk orchestra performed nightly through the Shravan month.", icon: "🎻" },
-        { name: "Jan Sanchar Programs", description: "Government-approved mass communication performances for public squares.", icon: "📢" },
-        { name: "Nukkad Natak", description: "Street theatre built for a crowd that wasn't planning to stop walking.", icon: "🎭" },
-        { name: "Private Event Orchestra", description: "Weddings, inaugurations, and celebrations scored by the same musicians who play the Mela.", icon: "💍" },
-        { name: "Performer Training", description: "Mentorship for young vocalists and instrumentalists in Deoghar.", icon: "🎓" },
-        { name: "Full Event Production", description: "Sound, stage, and lighting handled end-to-end.", icon: "🎪" }
-      ]
-    },
-    faq: [
-      { question: "How do I book Geet Bahar for an event?", answer: "Submit an inquiry through the contact form, email info@geetbahar.com, or call directly. We respond within 24 hours." },
-      { question: "What is the minimum duration for a performance?", answer: "Private events typically need 2–3 hours; government programs can be customized." }
-    ]
-  },
-  rates: {
-    private: { packages: [
-      { name: "Standard", duration: "2 hours", basePrice: 15000, inclusions: ["Orchestra with lead vocals", "Sound system & microphones", "Basic stage lighting"] },
-      { name: "Premium", duration: "3 hours", basePrice: 25000, inclusions: ["Full orchestra + folk dancers", "Stage backdrop & decoration", "Event coordination on-site"] },
-      { name: "Deluxe", duration: "4+ hours", basePrice: 40000, inclusions: ["Extended ensemble + guest artists", "Dedicated event manager", "Custom setlist consultation"] }
-    ]},
-    government: {
-      baseRates: {
-        janSanchar: { description: "Jan Sanchar Program", rate: 5000, unit: "per program" },
-        nukadNatak: { description: "Nukkad Natak Program", rate: 3000, unit: "per program" }
-      },
-      notes: "Government rates for Jan Sanchar and Nukkad Natak follow empanelled rates with the Government of Jharkhand. Volume rates available for multi-district drives — contact us for a written quote."
-    }
-  },
-  gallery: window.SAMPLE_GALLERY || { photos: [], videos: [] },
-  submissions: [
-    { id: 'seed-1', name: 'Rajesh Kumar', email: 'rajesh@example.com', phone: '+91-98765 43210', eventType: 'wedding', eventDate: '2026-12-15', message: 'Interested in a 3-hour orchestra for our wedding.', submittedAt: '2026-07-01T14:30:00Z', status: 'new' }
-  ],
-  visitors: [
-    { visitorId: 'v-001', city: 'Deoghar', state: 'Jharkhand', country: 'India', visitCount: 3, lastVisit: '2026-07-15T10:00:00Z' },
-    { visitorId: 'v-002', city: 'Ranchi', state: 'Jharkhand', country: 'India', visitCount: 1, lastVisit: '2026-07-14T09:20:00Z' },
-    { visitorId: 'v-003', city: 'Patna', state: 'Bihar', country: 'India', visitCount: 2, lastVisit: '2026-07-16T18:05:00Z' }
-  ],
-  analytics: {
-    byDay: { '2026-07-12': 14, '2026-07-13': 19, '2026-07-14': 11, '2026-07-15': 23, '2026-07-16': 17, '2026-07-17': 26, '2026-07-18': 9 },
-    byPath: { '/': 84, '/#gallery': 22, '/#rates': 18, '/#contact': 15 }
-  }
-};
-
-let isDemo = false;
 let authToken = null;
 
-function demoGet(key) {
-  const raw = localStorage.getItem(DEMO_KEYS[key]);
-  if (raw) return JSON.parse(raw);
-  localStorage.setItem(DEMO_KEYS[key], JSON.stringify(SEED[key]));
-  return SEED[key];
-}
-function demoSet(key, value) {
-  localStorage.setItem(DEMO_KEYS[key], JSON.stringify(value));
-}
-
-// ── Entry points ──────────────────────────────────────────────────────
+// ── Entry point ──────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (!window.IS_BACKEND_CONFIGURED) {
-    // No real backend configured — hide Google button, point straight to demo.
-    document.getElementById('google-signin-area').style.display = 'none';
-    document.getElementById('signin-subtitle').textContent =
-      'No backend is configured yet. Use Local Demo Mode to preview and test the admin panel.';
-  } else {
-    initGoogleSignIn();
-  }
-
+  initGoogleSignIn();
   setupTabs();
   document.getElementById('upload-zone').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', handleFileUpload);
@@ -109,42 +20,40 @@ document.addEventListener('DOMContentLoaded', () => {
   setupImageUploadWidget('aboutPhoto');
 });
 
-function enterDemoMode() {
-  isDemo = true;
-  document.getElementById('signin-screen').style.display = 'none';
-  document.getElementById('admin-shell').style.display = 'block';
-  document.getElementById('demo-banner').style.display = 'block';
-  document.getElementById('admin-email').textContent = 'demo@local (not signed in)';
-  renderAllTabs();
-}
-
-function exitDemoMode() {
-  isDemo = false;
-  document.getElementById('admin-shell').style.display = 'none';
-  document.getElementById('signin-screen').style.display = 'flex';
-}
-
 function signOut() {
   localStorage.removeItem('authToken');
   authToken = null;
   location.reload();
 }
 
-// ── Google Sign-In (only runs when a real backend is configured) ───────
+// ── Google Sign-In ───────────────────────────────────────────────────
 
 function initGoogleSignIn() {
+  // An existing session should always win — even if GOOGLE_CLIENT_ID is
+  // missing right now, someone who already signed in earlier shouldn't get
+  // locked out of the panel they were just using.
   const existing = localStorage.getItem('authToken');
   if (existing) {
     authToken = existing;
     showAdminShell(parseJwtEmail(existing));
     return;
   }
-  if (!window.google) {
-    // Google script may not have loaded (e.g. offline) — fall back gracefully.
-    document.getElementById('signin-subtitle').textContent =
-      'Could not load Google Sign-In. You can still use Local Demo Mode below.';
+
+  if (!window.IS_GOOGLE_CLIENT_ID_SET) {
+    document.getElementById('google-signin-area').style.display = 'none';
+    document.getElementById('signin-subtitle').innerHTML =
+      'Google sign-in isn\'t configured yet — add a real <code>GOOGLE_CLIENT_ID</code> in <code>js/config.js</code> ' +
+      '(get one from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>), ' +
+      'then reload this page.';
     return;
   }
+
+  if (!window.google) {
+    document.getElementById('signin-subtitle').textContent =
+      'Could not load Google Sign-In (the script may be blocked by your network). Please check your connection and reload.';
+    return;
+  }
+
   google.accounts.id.initialize({
     client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
     callback: handleGoogleCredential
@@ -166,10 +75,8 @@ function parseJwtEmail(token) {
 }
 
 function showAdminShell(email) {
-  isDemo = false;
   document.getElementById('signin-screen').style.display = 'none';
   document.getElementById('admin-shell').style.display = 'block';
-  document.getElementById('demo-banner').style.display = 'none';
   document.getElementById('admin-email').textContent = email;
   renderAllTabs();
 }
@@ -196,17 +103,48 @@ async function renderAllTabs() {
   await loadAnalytics();
 }
 
-// ── Content & Rates editors ─────────────────────────────────────────────
+// ── Shared helpers ───────────────────────────────────────────────────
 
 async function safeApiGet(type, fallback) {
-  try { return await apiCall(type, 'GET', null, authToken); }
-  catch { return fallback; }
+  try {
+    return await apiCall(type, 'GET', null, authToken);
+  } catch (e) {
+    console.error(`Failed to load "${type}":`, e.message);
+    return { __error: e.message, ...fallback };
+  }
 }
 
-// ── Site info form (contact, hero, hours, social) ───────────────────────
+function flashStatus(elOrElId, msg, isError = false) {
+  const ids = typeof elOrElId === 'string' ? [elOrElId] : elOrElId;
+  ids.forEach(id => {
+    const el = typeof id === 'string' ? document.getElementById(id) : id;
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isError ? 'var(--vermilion)' : '';
+  });
+}
+
+function escAttr(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function escapeHtmlAdmin(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function generateId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// ── Site info form (contact, hero, hours, social) ───────────────────
 
 async function loadSiteInfoForm() {
-  const data = isDemo ? demoGet('siteConfig') : await safeApiGet('config', SEED.siteConfig);
+  const data = await safeApiGet('config', {});
+  if (data.__error) {
+    flashStatus(['site-info-status-top', 'site-info-status'], '✗ Could not load — ' + data.__error, true);
+  }
   document.getElementById('f-phone').value = data.contact?.phone || '';
   document.getElementById('f-email').value = data.contact?.email || '';
   document.getElementById('f-address').value = data.contact?.address || '';
@@ -254,23 +192,21 @@ function collectSiteInfoForm() {
 async function saveSiteInfo() {
   const statusIds = ['site-info-status-top', 'site-info-status'];
   const data = collectSiteInfoForm();
-  if (isDemo) {
-    demoSet('siteConfig', data);
-    flashStatus(statusIds, '✓ Saved locally (demo mode).');
-    return;
-  }
   try {
     await apiCall('config', 'POST', data, authToken);
     flashStatus(statusIds, '✓ Saved.');
   } catch (e) {
-    flashStatus(statusIds, '✗ Save failed — check your connection and try again.', true);
+    flashStatus(statusIds, '✗ Save failed — ' + e.message, true);
   }
 }
 
-// ── About / Services / FAQ form (repeatable rows) ───────────────────────
+// ── About / Services / FAQ form (repeatable rows) ───────────────────
 
 async function loadAboutForm() {
-  const data = isDemo ? demoGet('pageContent') : await safeApiGet('content', SEED.pageContent);
+  const data = await safeApiGet('content', {});
+  if (data.__error) {
+    flashStatus(['about-status-top', 'about-status'], '✗ Could not load — ' + data.__error, true);
+  }
   document.getElementById('f-about-lead').value = data.about?.lead || '';
 
   imageState.aboutPhoto = data.about?.photo || null;
@@ -353,23 +289,21 @@ function collectAboutForm() {
 async function saveAboutContent() {
   const statusIds = ['about-status-top', 'about-status'];
   const data = collectAboutForm();
-  if (isDemo) {
-    demoSet('pageContent', data);
-    flashStatus(statusIds, '✓ Saved locally (demo mode).');
-    return;
-  }
   try {
     await apiCall('content', 'POST', data, authToken);
     flashStatus(statusIds, '✓ Saved.');
   } catch (e) {
-    flashStatus(statusIds, '✗ Save failed — check your connection and try again.', true);
+    flashStatus(statusIds, '✗ Save failed — ' + e.message, true);
   }
 }
 
-// ── Rates form (repeatable packages) ────────────────────────────────────
+// ── Rates form (repeatable packages) ─────────────────────────────────
 
 async function loadRatesForm() {
-  const data = isDemo ? demoGet('rates') : await safeApiGet('rates', SEED.rates);
+  const data = await safeApiGet('rates', {});
+  if (data.__error) {
+    flashStatus(['rates-status-top', 'rates-status'], '✗ Could not load — ' + data.__error, true);
+  }
   const list = document.getElementById('packages-list');
   list.innerHTML = '';
   (data.private?.packages || []).forEach(p => list.appendChild(buildPackageRow(p.name, p.duration, p.basePrice, p.inclusions)));
@@ -422,63 +356,46 @@ function collectRatesForm() {
 async function saveRatesForm() {
   const statusIds = ['rates-status-top', 'rates-status'];
   const data = collectRatesForm();
-  if (isDemo) {
-    demoSet('rates', data);
-    flashStatus(statusIds, '✓ Saved locally (demo mode).');
-    return;
-  }
   try {
     await apiCall('rates', 'POST', data, authToken);
     flashStatus(statusIds, '✓ Saved.');
   } catch (e) {
-    flashStatus(statusIds, '✗ Save failed — check your connection and try again.', true);
+    flashStatus(statusIds, '✗ Save failed — ' + e.message, true);
   }
-}
-
-// ── Shared helpers ───────────────────────────────────────────────────────
-
-function flashStatus(elOrElId, msg, isError = false) {
-  const ids = typeof elOrElId === 'string' ? [elOrElId] : elOrElId;
-  ids.forEach(id => {
-    const el = typeof id === 'string' ? document.getElementById(id) : id;
-    if (!el) return;
-    el.textContent = msg;
-    el.style.color = isError ? 'var(--vermilion)' : '';
-  });
-}
-
-function escAttr(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
 // ── Gallery ──────────────────────────────────────────────────────────
 
+let cachedGallery = { photos: [], videos: [] };
+
 async function loadGallery() {
-  const data = isDemo ? demoGet('gallery') : await safeApiGet('gallery', SEED.gallery);
   const grid = document.getElementById('admin-gallery-grid');
-  const items = [...(data.photos || []).map(p => ({ ...p, kind: 'photo' })), ...(data.videos || []).map(v => ({ ...v, kind: 'video' }))];
+  const data = await safeApiGet('gallery', { photos: [], videos: [] });
+  if (data.__error) {
+    grid.innerHTML = `<p style="color:var(--vermilion);">Could not load the gallery — ${escapeHtmlAdmin(data.__error)}</p>`;
+    return;
+  }
+  cachedGallery = data;
+  const items = [
+    ...(data.photos || []).map(p => ({ ...p, kind: 'photo' })),
+    ...(data.videos || []).map(v => ({ ...v, kind: 'video' }))
+  ];
   if (!items.length) {
     grid.innerHTML = '<p style="color:var(--text-soft);">No items yet — upload one above.</p>';
     return;
   }
-  grid.innerHTML = items.map((item, i) => `
+  grid.innerHTML = items.map(item => `
     <div class="admin-gallery-card">
-      <div style="width:100%;aspect-ratio:4/3;background:${item.color || 'var(--surface)'};display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-label);font-size:0.8rem;text-align:center;padding:10px;">
-        ${item.kind === 'video' ? '▶ ' : ''}${escapeHtmlAdmin(item.title || 'Untitled')}
-      </div>
+      ${item.kind === 'video'
+        ? `<video src="${resolveAdminImageRef(item.filename)}" muted></video>`
+        : `<img src="${resolveAdminImageRef(item.filename)}" alt="${escAttr(item.title || '')}">`}
       <div class="meta">
         <h4>${escapeHtmlAdmin(item.title || 'Untitled')}</h4>
-        <small>${escapeHtmlAdmin(item.desc || '')}</small>
-        <button class="btn-delete" onclick="deleteGalleryItem('${item.kind}', ${i})">Delete</button>
+        <small>${item.kind === 'video' ? 'Video' : 'Photo'}</small>
+        <button class="btn-delete" onclick="deleteGalleryItem('${item.kind}', '${item.id}')">Delete</button>
       </div>
     </div>
   `).join('');
-}
-
-function escapeHtmlAdmin(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
 }
 
 function handleFileUpload(e) {
@@ -486,53 +403,58 @@ function handleFileUpload(e) {
   if (!file) return;
   const kind = file.type.startsWith('video') ? 'videos' : 'photos';
   const title = file.name.replace(/\.[^.]+$/, '');
-
-  if (isDemo) {
-    const gallery = demoGet('gallery');
-    gallery[kind] = gallery[kind] || [];
-    const colors = ['#E8641C', '#8B1E3F', '#F2A93B', '#1B1F3B'];
-    gallery[kind].unshift({ title, desc: 'Uploaded ' + new Date().toLocaleDateString(), color: colors[gallery[kind].length % colors.length] });
-    demoSet('gallery', gallery);
-    loadGallery();
-    return;
-  }
+  const grid = document.getElementById('admin-gallery-grid');
 
   const reader = new FileReader();
   reader.onload = async () => {
     try {
       const media = await apiCall('media', 'POST', { filename: file.name, contentType: file.type, dataBase64: reader.result }, authToken);
-      const gallery = await safeApiGet('gallery', SEED.gallery);
+      const gallery = await safeApiGet('gallery', { photos: [], videos: [] });
       const list = gallery[kind] || [];
-      list.unshift({ title, filename: media.filename, description: '' });
-      await apiCall('gallery', 'POST', { [kind]: list }, authToken);
+      list.unshift({ id: generateId(kind === 'videos' ? 'video' : 'photo'), title, filename: media.filename, description: '' });
+      await apiCall('gallery', 'POST', { ...gallery, [kind]: list }, authToken);
       loadGallery();
     } catch (err) {
-      alert('Upload failed: ' + err.message);
+      grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Upload failed — ${escapeHtmlAdmin(err.message)}</p>`);
     }
   };
   reader.readAsDataURL(file);
+  e.target.value = '';
 }
 
-function deleteGalleryItem(kind, index) {
+async function deleteGalleryItem(kind, id) {
   const key = kind === 'video' ? 'videos' : 'photos';
-  if (isDemo) {
-    const gallery = demoGet('gallery');
-    gallery[key].splice(index, 1);
-    demoSet('gallery', gallery);
+  const grid = document.getElementById('admin-gallery-grid');
+  try {
+    await apiCall('gallery', 'DELETE', null, authToken, `&id=${encodeURIComponent(id)}`);
     loadGallery();
-  } else {
-    // Live mode deletion would call the DELETE endpoint with the item's real id.
-    loadGallery();
+  } catch (err) {
+    // Fall back to a full rewrite of the gallery list minus this item, in
+    // case the backend's DELETE route differs from what's documented.
+    try {
+      const gallery = cachedGallery;
+      gallery[key] = (gallery[key] || []).filter(item => item.id !== id);
+      await apiCall('gallery', 'POST', gallery, authToken);
+      loadGallery();
+    } catch (err2) {
+      grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Delete failed — ${escapeHtmlAdmin(err2.message)}</p>`);
+    }
   }
 }
 
-// ── Submissions / Inquiries ─────────────────────────────────────────────
+// ── Submissions / Inquiries ──────────────────────────────────────────
 
 let cachedSubmissions = [];
 
 async function loadSubmissions() {
-  cachedSubmissions = isDemo ? demoGet('submissions') : await safeApiGet('contact_submissions', SEED.submissions);
-  if (!Array.isArray(cachedSubmissions)) cachedSubmissions = cachedSubmissions.submissions || [];
+  const grid = document.getElementById('submissions-grid');
+  const data = await safeApiGet('contact_submissions', []);
+  if (data && data.__error) {
+    grid.innerHTML = `<p style="color:var(--vermilion);">Could not load inquiries — ${escapeHtmlAdmin(data.__error)}</p>`;
+    cachedSubmissions = [];
+    return;
+  }
+  cachedSubmissions = Array.isArray(data) ? data : (data.submissions || []);
   renderSubmissions();
 }
 
@@ -566,19 +488,28 @@ function renderSubmissions() {
 async function updateSubmissionStatus(id, status) {
   const item = cachedSubmissions.find(s => s.id === id);
   if (item) item.status = status;
-  if (isDemo) {
-    demoSet('submissions', cachedSubmissions);
-  } else {
-    try { await apiCall('contact_submissions', 'PATCH', null, authToken, `&id=${id}&status=${status}`); }
-    catch { /* keep UI optimistic even if the request fails */ }
+  try {
+    await apiCall('contact_submissions', 'PATCH', null, authToken, `&id=${id}&status=${status}`);
+  } catch (e) {
+    console.error('Status update failed:', e.message);
+    alert('Could not update status — ' + e.message);
   }
 }
 
 // ── Analytics ────────────────────────────────────────────────────────
 
 async function loadAnalytics() {
-  const analytics = isDemo ? demoGet('analytics') : await safeApiGet('analytics', SEED.analytics);
-  const visitors = isDemo ? demoGet('visitors') : await safeApiGet('visitors', SEED.visitors);
+  const analytics = await safeApiGet('analytics', { byDay: {}, byPath: {} });
+  const visitorsRaw = await safeApiGet('visitors', []);
+  const visitors = Array.isArray(visitorsRaw) ? visitorsRaw : (visitorsRaw.visitors || []);
+
+  if (analytics.__error) {
+    document.getElementById('stat-views').textContent = '—';
+    document.getElementById('stat-visitors').textContent = '—';
+    document.getElementById('stat-new').textContent = '—';
+    document.getElementById('stat-repeat').textContent = '—';
+    return;
+  }
 
   const totalViews = Object.values(analytics.byDay || {}).reduce((a, b) => a + b, 0);
   const uniqueVisitors = visitors.length;
@@ -638,41 +569,44 @@ function renderPagesChart(byPath) {
 // Dependency-free bar list — used whenever Chart.js isn't available, so
 // analytics still show real numbers instead of a broken tab.
 function renderFallbackBars(canvas, data, color) {
-  const max = Math.max(...Object.values(data), 1);
+  const entries = Object.entries(data);
+  const max = Math.max(...entries.map(([, v]) => v), 1);
   const wrapper = document.createElement('div');
   wrapper.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
-  wrapper.innerHTML = Object.entries(data).map(([label, val]) => `
-    <div style="display:flex;align-items:center;gap:10px;font-family:var(--font-label);font-size:0.78rem;">
-      <span style="width:90px;color:var(--text-soft);">${label}</span>
-      <div style="flex:1;background:var(--border);border-radius:4px;overflow:hidden;height:14px;">
-        <div style="width:${(val / max * 100).toFixed(0)}%;background:${color};height:100%;"></div>
-      </div>
-      <span style="width:30px;text-align:right;">${val}</span>
-    </div>
-  `).join('');
+  wrapper.innerHTML = entries.length
+    ? entries.map(([label, val]) => `
+        <div style="display:flex;align-items:center;gap:10px;font-family:var(--font-label);font-size:0.78rem;">
+          <span style="width:90px;color:var(--text-soft);">${label}</span>
+          <div style="flex:1;background:var(--border);border-radius:4px;overflow:hidden;height:14px;">
+            <div style="width:${(val / max * 100).toFixed(0)}%;background:${color};height:100%;"></div>
+          </div>
+          <span style="width:30px;text-align:right;">${val}</span>
+        </div>
+      `).join('')
+    : '<p style="color:var(--text-soft);font-size:0.85rem;">No data yet.</p>';
   canvas.replaceWith(wrapper);
   wrapper.id = canvas.id;
 }
 
 function renderVisitorsTable(visitors) {
   const tbody = document.querySelector('#visitors-table tbody');
-  tbody.innerHTML = visitors.map(v => `
-    <tr>
-      <td>${escapeHtmlAdmin(v.city || '')}, ${escapeHtmlAdmin(v.state || v.country || '')}</td>
-      <td>${v.visitCount}</td>
-      <td>${new Date(v.lastVisit).toLocaleDateString()}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = visitors.length
+    ? visitors.map(v => `
+        <tr>
+          <td>${escapeHtmlAdmin(v.city || '')}, ${escapeHtmlAdmin(v.state || v.country || '')}</td>
+          <td>${v.visitCount}</td>
+          <td>${new Date(v.lastVisit).toLocaleDateString()}</td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="3" style="color:var(--text-soft);">No visitors recorded yet.</td></tr>';
 }
 
 // ── Image upload widgets (hero main, hero secondary, Uttam Kumar's photo)
 //
-// Each widget holds its current value in imageState[key] — a string ref
-// that is either a data: URL (Local Demo Mode) or an uploaded filename
-// (Live mode, resolved against the media endpoint on the public site).
-// Selecting a file previews and stores it immediately; the actual save
-// into config/content happens when the surrounding form's Save button is
-// clicked, same as every other field in that form. ────────────────────
+// Each widget holds its current value in imageState[key] — the filename
+// returned by the media endpoint after upload. Selecting a file uploads
+// and previews it immediately; the actual save into config/content still
+// happens when the surrounding form's Save button is clicked. ──────────
 
 const imageState = { heroMain: null, heroSecondary: null, aboutPhoto: null };
 
@@ -693,7 +627,7 @@ function setupImageUploadWidget(key) {
     } catch (err) {
       alert('Image upload failed: ' + err.message);
     }
-    input.value = ''; // allow re-selecting the same file later
+    input.value = '';
   });
   removeBtn?.addEventListener('click', () => {
     imageState[key] = null;
@@ -719,15 +653,10 @@ function renderImageWidget(key) {
   }
 }
 
-// In demo mode the ref IS the data: URL, so it can be used directly as an
-// <img> src. In live mode the ref is a filename that needs the media
-// endpoint prefixed on to resolve to an actual URL.
 function resolveAdminImageRef(ref) {
   if (!ref) return '';
-  if (window.IS_BACKEND_CONFIGURED && !ref.startsWith('data:')) {
-    return `${APP_CONFIG.API_BASE}&type=media&file=${encodeURIComponent(ref)}`;
-  }
-  return ref;
+  if (ref.startsWith('data:') || ref.startsWith('http')) return ref;
+  return `${APP_CONFIG.API_BASE}&type=media&file=${encodeURIComponent(ref)}`;
 }
 
 function fileToDataUrl(file) {
@@ -741,9 +670,6 @@ function fileToDataUrl(file) {
 
 async function uploadImageAndGetRef(file) {
   const dataUrl = await fileToDataUrl(file);
-  if (!window.IS_BACKEND_CONFIGURED) {
-    return dataUrl; // demo mode: the ref IS the data URL, stored as-is
-  }
   const res = await apiCall('media', 'POST', { filename: file.name, contentType: file.type, dataBase64: dataUrl }, authToken);
-  return res.filename; // live mode: store the filename, resolve to a URL on read
+  return res.filename;
 }

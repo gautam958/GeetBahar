@@ -118,17 +118,3 @@ window.I18N_DATA = {
     footer: { tagline: "Broadcasting culture across Jharkhand" }
   }
 };
-
-// Sample gallery content so the gallery section is never empty on first load.
-window.SAMPLE_GALLERY = {
-  photos: [
-    { title: "Shravani Mela 2025 — Night procession", desc: "Orchestra performing alongside the kanwariya route", color: "#E8641C" },
-    { title: "Nukkad Natak — health awareness", desc: "Street theatre staged for a district health drive", color: "#8B1E3F" },
-    { title: "Wedding orchestra, Deoghar", desc: "Premium package, 3-hour evening set", color: "#F2A93B" },
-    { title: "Jan Sanchar — literacy program", desc: "Public square performance, Godda district", color: "#1B1F3B" }
-  ],
-  videos: [
-    { title: "Performance highlights, 2025", desc: "Compilation across five district programs", color: "#8B1E3F" },
-    { title: "Shravani Mela full set (excerpt)", desc: "20-minute orchestral excerpt from the main procession night", color: "#E8641C" }
-  ]
-};

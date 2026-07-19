@@ -18,10 +18,10 @@
       <span><span class="hi" data-i18n="org.name">गीत बहार संगीत समूह</span></span>
     </a>
     <div class="header-controls">
-      <select id="language-select" class="pill-select" onchange="changeLanguage(this.value)">
-        <option value="hi">हिन्दी</option>
-        <option value="en">English</option>
-      </select>
+      <div class="lang-toggle" id="language-toggle" role="group" aria-label="Language">
+        <button type="button" class="lang-toggle-btn active" data-lang="hi" onclick="changeLanguage('hi')">हिं</button>
+        <button type="button" class="lang-toggle-btn" data-lang="en" onclick="changeLanguage('en')">EN</button>
+      </div>
       <select id="theme-select" class="pill-select" onchange="changeTheme(this.value)">
         <option value="light">Light</option>
         <option value="dark">Dark</option>
@@ -169,6 +169,7 @@
 <div id="lightbox" class="lightbox">
   <button class="lightbox-close" aria-label="Close">&times;</button>
   <img id="lightbox-image" src="" alt="">
+  <video id="lightbox-video" controls playsinline style="display:none;"></video>
 </div>
 
 <div class="section-divider"><div class="taal-strip" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>

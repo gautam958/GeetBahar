@@ -34,8 +34,9 @@ function setLanguage(code) {
   if (!['hi', 'en'].includes(code)) code = APP_CONFIG.DEFAULT_LANGUAGE;
   document.documentElement.lang = code;
   localStorage.setItem('language', code);
-  const sel = document.getElementById('language-select');
-  if (sel) sel.value = code;
+  document.querySelectorAll('.lang-toggle-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === code);
+  });
   applyTranslations(code);
 }
 

@@ -9,9 +9,9 @@
 <!-- Chart.js: loaded async; admin.js falls back to plain bar lists if this
      never arrives (offline, blocked CDN, restrictive network). -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js" async></script>
-<!-- Google Sign-In: only needed once a real backend is configured; admin.js
-     checks window.google before use, so a blocked/slow load never breaks
-     Local Demo Mode. -->
+<!-- Google Sign-In: required to reach the admin panel. If this fails to
+     load (blocked network), admin.js shows a clear message instead of a
+     silently broken button. -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -26,20 +26,11 @@
     <div id="google-signin-area">
       <div id="google-signin-btn"></div>
     </div>
-
-    <button class="demo-login-btn" onclick="enterDemoMode()">
-      ▶ Continue in Local Demo Mode (no sign-in needed)
-    </button>
   </div>
 </div>
 
 <!-- ═══════════════ ADMIN SHELL ═══════════════ -->
 <div id="admin-shell" class="admin-shell" style="display:none;">
-
-  <div id="demo-banner" class="demo-banner" style="display:none;">
-    Local Demo Mode — changes save to this browser only, not to a live server.
-    <button onclick="exitDemoMode()">Exit demo</button>
-  </div>
 
   <div class="admin-topbar">
     <div class="container">

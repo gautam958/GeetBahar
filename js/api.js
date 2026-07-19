@@ -1,14 +1,11 @@
 // Geet Bahar — API client
 //
-// When IS_BACKEND_CONFIGURED is false (see config.js), every function here
-// short-circuits to bundled/local data instead of making a network call.
-// This is what makes the site (and the admin panel) fully usable before
-// a backend is ever deployed.
+// Every call here hits the live Azure Function. There is no local/demo
+// fallback — if a request fails, the caller is responsible for showing
+// that to the person (see the error banners in admin.js and index.js)
+// rather than silently substituting fake data.
 
 async function apiCall(type, method = 'GET', data = null, authToken = null, params = '') {
-  if (!window.IS_BACKEND_CONFIGURED) {
-    throw new Error('backend-not-configured');
-  }
   const url = `${APP_CONFIG.API_BASE}&type=${type}${params}`;
   const options = { method, headers: { 'Content-Type': 'application/json' } };
   if (authToken) options.headers['Authorization'] = `Bearer ${authToken}`;
@@ -35,19 +32,13 @@ function getOrCreateVisitorId() {
 }
 
 async function trackPageView(path = window.location.pathname) {
-  if (!window.IS_BACKEND_CONFIGURED) return; // silently skip in local mode
   try {
     await apiCall('track_visitor', 'POST', { path, visitorId: getOrCreateVisitorId() });
-  } catch (e) { /* tracking failure should never break the page */ }
+  } catch (e) {
+    console.warn('Visitor tracking failed (non-fatal):', e.message);
+  }
 }
 
 async function submitContactForm(formData) {
-  if (!window.IS_BACKEND_CONFIGURED) {
-    // Local mode: keep the submission so the admin demo panel has something to show.
-    const list = JSON.parse(localStorage.getItem('gb_demo_submissions') || '[]');
-    list.unshift({ ...formData, id: 'local-' + Date.now(), submittedAt: new Date().toISOString(), status: 'new' });
-    localStorage.setItem('gb_demo_submissions', JSON.stringify(list));
-    return { ok: true, local: true };
-  }
   return apiCall('contact_submit', 'POST', formData);
 }

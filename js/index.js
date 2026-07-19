@@ -1,4 +1,10 @@
 // Geet Bahar — Homepage logic
+//
+// Everything on this page — gallery, about text, hero images, contact
+// info, rates — is loaded from the live API on every page view. There is
+// no bundled/sample fallback for content that should come from the
+// backend; the bilingual UI labels in i18n-data.js are the only
+// exception (those are interface copy, not site content).
 
 document.addEventListener('DOMContentLoaded', () => {
   trackPageView();
@@ -9,39 +15,156 @@ document.addEventListener('DOMContentLoaded', () => {
   applyAdminOverrides();
 });
 
-// ── Admin overrides — hero images, Uttam Kumar's photo, contact info.
-//    These come from whatever the admin panel has saved (localStorage in
-//    Local Demo Mode, or the live API once a backend is configured). The
-//    baked-in i18n content stays as the fallback if nothing's been set. ──
+// ── Gallery — loaded from the real API only ─────────────────────────────
+
+let galleryData = { photos: [], videos: [] };
+
+async function renderGallery() {
+  try {
+    galleryData = await apiCall('gallery', 'GET');
+  } catch (e) {
+    console.error('Could not load gallery:', e.message);
+    renderGalleryError('panel-photos');
+    renderGalleryError('panel-videos');
+    return;
+  }
+  renderGalleryPanel('panel-photos', galleryData.photos || [], 'photo');
+  renderGalleryPanel('panel-videos', galleryData.videos || [], 'video');
+}
+
+function renderGalleryError(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel) panel.innerHTML = `<div class="gallery-empty">Could not load this right now — please try again shortly.</div>`;
+}
+
+function renderGalleryPanel(panelId, items, kind) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  if (!items.length) {
+    panel.innerHTML = `<div class="gallery-empty">No ${kind}s added yet — upload from the admin panel.</div>`;
+    return;
+  }
+  panel.innerHTML = items.map((item, i) => {
+    const url = resolveImageRef(item.filename);
+    const thumb = kind === 'video'
+      ? `<video src="${url}" muted preload="metadata"></video><span class="gallery-play-badge">▶</span>`
+      : `<img src="${url}" alt="${escapeHtml(item.title || '')}" loading="lazy">`;
+    return `
+      <div class="gallery-item" onclick="openMediaModal('${kind}', ${i})">
+        ${thumb}
+        <div class="gallery-caption">${escapeHtml(item.title || '')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function setupGalleryTabs() {
+  document.querySelectorAll('.gallery-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.gallery-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.gallery-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.panel)?.classList.add('active');
+    });
+  });
+}
+
+// ── Media modal — images open full-size, videos open playable ──────────
+// (Previously photos/videos were flat color blocks with no way to view
+// them properly; this opens the real file, sized to fit the viewport.)
+
+function openMediaModal(kind, index) {
+  const item = (kind === 'video' ? galleryData.videos : galleryData.photos)[index];
+  if (!item) return;
+  const modal = document.getElementById('lightbox');
+  const imgEl = document.getElementById('lightbox-image');
+  const videoEl = document.getElementById('lightbox-video');
+  const url = resolveImageRef(item.filename);
+
+  if (kind === 'video') {
+    imgEl.style.display = 'none';
+    videoEl.style.display = 'block';
+    videoEl.src = url;
+    videoEl.load();
+  } else {
+    videoEl.pause();
+    videoEl.style.display = 'none';
+    videoEl.removeAttribute('src');
+    imgEl.style.display = 'block';
+    imgEl.src = url;
+    imgEl.alt = item.title || '';
+  }
+  modal.classList.add('active');
+}
+
+function setupLightbox() {
+  const lightbox = document.getElementById('lightbox');
+  const closeBtn = lightbox?.querySelector('.lightbox-close');
+  const videoEl = document.getElementById('lightbox-video');
+
+  function closeModal() {
+    lightbox.classList.remove('active');
+    videoEl?.pause();
+  }
+
+  closeBtn?.addEventListener('click', closeModal);
+  lightbox?.addEventListener('click', e => { if (e.target === lightbox) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+}
+
+// ── Media URL resolution ─────────────────────────────────────────────
+
+function resolveImageRef(ref) {
+  if (!ref) return '';
+  if (ref.startsWith('data:') || ref.startsWith('http')) return ref;
+  return `${APP_CONFIG.API_BASE}&type=media&file=${encodeURIComponent(ref)}`;
+}
+
+// ── Contact form ───────────────────────────────────────────────────────
+
+function setupContactForm() {
+  const form = document.getElementById('contact-form');
+  const status = document.getElementById('form-status');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    status.textContent = 'Sending…';
+    status.style.color = '';
+    try {
+      await submitContactForm(data);
+      status.textContent = '✓ Sent — we will get back to you soon.';
+      form.reset();
+    } catch (err) {
+      status.textContent = 'Could not send — please try again or call us directly.';
+      status.style.color = 'var(--vermilion)';
+    }
+  });
+}
+
+// ── Admin overrides — hero images, Uttam Kumar's photo, contact info,
+//    always loaded live from the API. ─────────────────────────────────
 
 async function applyAdminOverrides() {
-  let site = null, content = null;
-
-  if (window.IS_BACKEND_CONFIGURED) {
-    try { site = await apiCall('config', 'GET'); } catch (e) { /* keep fallback */ }
-    try { content = await apiCall('content', 'GET'); } catch (e) { /* keep fallback */ }
-  } else {
-    site = readLocalJSON('gb_demo_site_config');
-    content = readLocalJSON('gb_demo_page_content');
+  try {
+    const site = await apiCall('config', 'GET');
+    if (site) applySiteConfig(site);
+  } catch (e) {
+    console.error('Could not load site config:', e.message);
   }
-
-  if (site) applySiteConfig(site);
-  if (content) applyPageContent(content);
-}
-
-function readLocalJSON(key) {
-  try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
-}
-
-// A demo-mode ref is already a data: URL (stored directly by the admin
-// upload). A live-mode ref is a filename that needs to be resolved against
-// the media endpoint.
-function resolveImageRef(ref) {
-  if (!ref) return null;
-  if (window.IS_BACKEND_CONFIGURED && !ref.startsWith('data:')) {
-    return `${APP_CONFIG.API_BASE}&type=media&file=${encodeURIComponent(ref)}`;
+  try {
+    const content = await apiCall('content', 'GET');
+    if (content) applyPageContent(content);
+  } catch (e) {
+    console.error('Could not load page content:', e.message);
   }
-  return ref;
 }
 
 function applySiteConfig(site) {
@@ -84,88 +207,4 @@ function applyPageContent(content) {
     img.style.display = 'block';
     if (fallback) fallback.style.display = 'none';
   }
-}
-
-// ── Gallery (renders from bundled sample data; swaps to live data if a
-//    backend is configured and returns real items) ──────────────────────
-
-function renderGallery() {
-  const data = window.SAMPLE_GALLERY;
-  renderGalleryPanel('panel-photos', data.photos, 'photo');
-  renderGalleryPanel('panel-videos', data.videos, 'video');
-
-  if (window.IS_BACKEND_CONFIGURED) {
-    apiCall('gallery', 'GET').then(live => {
-      if (live?.photos?.length) renderGalleryPanel('panel-photos', live.photos, 'photo');
-      if (live?.videos?.length) renderGalleryPanel('panel-videos', live.videos, 'video');
-    }).catch(() => { /* keep bundled sample content on failure */ });
-  }
-}
-
-function renderGalleryPanel(panelId, items, kind) {
-  const panel = document.getElementById(panelId);
-  if (!panel) return;
-  if (!items || !items.length) {
-    panel.innerHTML = `<div class="gallery-empty">No ${kind}s added yet — upload from the admin panel.</div>`;
-    return;
-  }
-  panel.innerHTML = items.map(item => `
-    <div class="gallery-item" data-title="${escapeHtml(item.title || '')}">
-      <div style="width:100%;height:100%;background:${item.color || 'var(--surface)'};display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-label);font-size:0.8rem;text-align:center;padding:12px;">
-        ${kind === 'video' ? '▶ ' : ''}${escapeHtml(item.title || '')}
-      </div>
-      <div class="gallery-caption">${escapeHtml(item.desc || '')}</div>
-    </div>
-  `).join('');
-}
-
-function escapeHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function setupGalleryTabs() {
-  document.querySelectorAll('.gallery-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.gallery-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.gallery-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('panel-' + tab.dataset.panel)?.classList.add('active');
-    });
-  });
-}
-
-// ── Lightbox (kept simple; sample gallery uses color blocks, so this is
-//    ready for real images once uploaded) ─────────────────────────────
-
-function setupLightbox() {
-  const lightbox = document.getElementById('lightbox');
-  const closeBtn = lightbox?.querySelector('.lightbox-close');
-  closeBtn?.addEventListener('click', () => lightbox.classList.remove('active'));
-  lightbox?.addEventListener('click', e => { if (e.target === lightbox) lightbox.classList.remove('active'); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') lightbox?.classList.remove('active'); });
-}
-
-// ── Contact form ───────────────────────────────────────────────────────
-
-function setupContactForm() {
-  const form = document.getElementById('contact-form');
-  const status = document.getElementById('form-status');
-  if (!form) return;
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(form).entries());
-    status.textContent = 'Sending…';
-    try {
-      const res = await submitContactForm(data);
-      status.textContent = res?.local
-        ? '✓ Saved locally (demo mode) — connect the backend to receive real emails.'
-        : '✓ Sent — we will get back to you soon.';
-      form.reset();
-    } catch (err) {
-      status.textContent = 'Could not send — please try again or call us directly.';
-    }
-  });
 }
