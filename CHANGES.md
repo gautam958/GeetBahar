@@ -567,3 +567,72 @@ Video thumbnail has muted: True
 Simulated total API failure → gallery panel shows real error text,
 not a blank space or generic unhelpful message
 ```
+
+---
+
+## Update: Image loading spinners, image-delete fix, duplicate save buttons, admin link
+
+### Loading spinners — Index page
+Every photo and video on the homepage now shows a spinner while it loads:
+gallery thumbnails, the main hero image, the secondary hero image, and
+Uttam Kumar's photo. The spinner fades out the moment the file finishes
+loading (or hands off to the existing error message if it fails to load
+at all), and the image/video itself fades in rather than popping in
+abruptly. Verified: spinner shows immediately, then the gallery item gets
+a `media-loaded` class and the spinner's computed opacity drops to `0`
+once the real image data arrives.
+
+### Images "not deleting correctly" — found and fixed
+Real bug, not a misunderstanding: clicking "Remove image" (on the hero
+images or Uttam Kumar's photo) only cleared the preview in your browser —
+it did **not** save anything. The removal only became permanent if you
+remembered to separately click the form's Save button afterward. If you
+didn't, reloading the page would bring the old image right back, which
+would absolutely look like "delete doesn't work."
+
+Fixed: clicking "Remove image" now immediately saves that change on its
+own — no separate Save click needed. Also switched the cleared value from
+`null` to `""` (empty string): if your backend has any logic that skips
+updating a field when it receives `null` (a common defensive pattern),
+`null` would make a delete silently do nothing server-side even though
+the admin UI looked fine. An empty string can't be confused with "no
+change."
+
+Verified end-to-end: uploaded a photo, clicked Remove, confirmed it
+auto-saved, reloaded the whole page fresh, and the photo was genuinely
+gone (not just hidden client-side) — this was checked against the actual
+save/load round trip, not just the button click.
+
+### Admin → Index sync — verified field by field
+Edited every Site Info field (phone, email, address, both hero titles,
+business hours, social links, hero image) and the About lead text +
+Uttam Kumar's photo, saved, then loaded the actual public homepage fresh
+and checked each one landed correctly:
+```
+Phone: MATCH      Email: MATCH      Address: MATCH
+Business hours (custom text): MATCH
+Hero main image visible: True
+About photo visible: True, fallback correctly hidden
+```
+Nothing silently failed to sync in this pass.
+
+### Duplicate save buttons — consolidated to one per form
+Removed the bottom copy of each Save button (Contact & Hero, About/
+Services/FAQ, Rates) — there's exactly one now, not two. To keep it
+reachable on long forms without a second button, it's `position: sticky`
+at the top of its card, so it stays visible on-screen as you scroll
+through that section instead of needing to scroll back up. Verified:
+scrolled all the way down into the FAQ list, and the Save button for that
+form was still visible the whole time.
+
+### "Admin menu opens in a new tab"
+Checked the actual code: the Admin link has no `target="_blank"` anywhere,
+and a click-through test confirms it navigates in the same browser
+tab/page (tab count before and after: identical). This should already be
+correct — if it's still opening a new tab for you, it's most likely
+either a stale cached copy of the page (see the cache-busting note from
+last round — please make sure that hard-refresh/clear-site-data step
+happened) or a browser-level setting (some mobile browsers or extensions
+force certain links to open in a new tab regardless of the page's own
+code). Let me know if it persists after a clean reload and I'll dig
+further.

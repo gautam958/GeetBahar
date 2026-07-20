@@ -148,7 +148,7 @@ function generateId(prefix) {
 async function loadSiteInfoForm() {
   const data = await safeApiGet('config', {});
   if (data.__error) {
-    flashStatus(['site-info-status-top', 'site-info-status'], '✗ Could not load — ' + data.__error, true);
+    flashStatus(['site-info-status-top'], '✗ Could not load — ' + data.__error, true);
   }
   document.getElementById('f-phone').value = data.contact?.phone || '';
   document.getElementById('f-email').value = data.contact?.email || '';
@@ -162,8 +162,8 @@ async function loadSiteInfoForm() {
   document.getElementById('f-social-ig').value = data.social?.instagram || '';
   document.getElementById('f-social-yt').value = data.social?.youtube || '';
 
-  imageState.heroMain = data.hero?.heroImage || null;
-  imageState.heroSecondary = data.hero?.heroImageSecondary || null;
+  imageState.heroMain = data.hero?.heroImage || '';
+  imageState.heroSecondary = data.hero?.heroImageSecondary || '';
   renderImageWidget('heroMain');
   renderImageWidget('heroSecondary');
 }
@@ -195,7 +195,7 @@ function collectSiteInfoForm() {
 }
 
 async function saveSiteInfo() {
-  const statusIds = ['site-info-status-top', 'site-info-status'];
+  const statusIds = ['site-info-status-top'];
   const data = collectSiteInfoForm();
   try {
     await apiCall('config', 'POST', data, authToken);
@@ -210,11 +210,11 @@ async function saveSiteInfo() {
 async function loadAboutForm() {
   const data = await safeApiGet('content', {});
   if (data.__error) {
-    flashStatus(['about-status-top', 'about-status'], '✗ Could not load — ' + data.__error, true);
+    flashStatus(['about-status-top'], '✗ Could not load — ' + data.__error, true);
   }
   document.getElementById('f-about-lead').value = data.about?.lead || '';
 
-  imageState.aboutPhoto = data.about?.photo || null;
+  imageState.aboutPhoto = data.about?.photo || '';
   renderImageWidget('aboutPhoto');
 
   const paraList = document.getElementById('about-paragraphs-list');
@@ -292,7 +292,7 @@ function collectAboutForm() {
 }
 
 async function saveAboutContent() {
-  const statusIds = ['about-status-top', 'about-status'];
+  const statusIds = ['about-status-top'];
   const data = collectAboutForm();
   try {
     await apiCall('content', 'POST', data, authToken);
@@ -307,7 +307,7 @@ async function saveAboutContent() {
 async function loadRatesForm() {
   const data = await safeApiGet('rates', {});
   if (data.__error) {
-    flashStatus(['rates-status-top', 'rates-status'], '✗ Could not load — ' + data.__error, true);
+    flashStatus(['rates-status-top'], '✗ Could not load — ' + data.__error, true);
   }
   const list = document.getElementById('packages-list');
   list.innerHTML = '';
@@ -359,7 +359,7 @@ function collectRatesForm() {
 }
 
 async function saveRatesForm() {
-  const statusIds = ['rates-status-top', 'rates-status'];
+  const statusIds = ['rates-status-top'];
   const data = collectRatesForm();
   try {
     await apiCall('rates', 'POST', data, authToken);
@@ -636,9 +636,21 @@ function renderVisitorsTable(visitors) {
 // Each widget holds its current value in imageState[key] — the filename
 // returned by the media endpoint after upload. Selecting a file uploads
 // and previews it immediately; the actual save into config/content still
-// happens when the surrounding form's Save button is clicked. ──────────
+// happens when the surrounding form's Save button is clicked (or, for
+// removal specifically, immediately — see below). ──────────────────────
 
-const imageState = { heroMain: null, heroSecondary: null, aboutPhoto: null };
+const imageState = { heroMain: '', heroSecondary: '', aboutPhoto: '' };
+
+// Which save function persists each image slot, so "Remove" can commit
+// right away instead of silently waiting on a separate Save click that's
+// easy to forget — that gap was the actual cause of images appearing to
+// "not delete": the preview cleared locally, but nothing was ever sent
+// to the backend until Save was clicked separately.
+const IMAGE_SAVE_FN = {
+  heroMain: () => saveSiteInfo(),
+  heroSecondary: () => saveSiteInfo(),
+  aboutPhoto: () => saveAboutContent()
+};
 
 function setupImageUploadWidget(key) {
   const zone = document.getElementById(`${key}-zone`);
@@ -659,9 +671,17 @@ function setupImageUploadWidget(key) {
     }
     input.value = '';
   });
-  removeBtn?.addEventListener('click', () => {
-    imageState[key] = null;
+  removeBtn?.addEventListener('click', async () => {
+    // Using "" rather than null here on purpose: some backends silently
+    // skip updating a field when the incoming value is null (treating it
+    // as "no change"), which would make removal look like it worked in
+    // the admin UI but never actually clear the stored value. An empty
+    // string is unambiguously "cleared."
+    imageState[key] = '';
     renderImageWidget(key);
+    if (removeBtn) { removeBtn.disabled = true; removeBtn.textContent = 'Removing…'; }
+    await IMAGE_SAVE_FN[key]();
+    if (removeBtn) { removeBtn.disabled = false; removeBtn.textContent = 'Remove image'; }
   });
 }
 

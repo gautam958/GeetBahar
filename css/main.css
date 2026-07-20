@@ -425,6 +425,7 @@ html[data-theme="savan"] .hero { background-color: var(--surface); }
 }
 
 .hero-secondary-image {
+  position: relative;
   width: 148px;
   aspect-ratio: 4/5;
   border-radius: var(--radius);
@@ -632,7 +633,12 @@ html[data-theme="savan"] .hero { background-color: var(--surface); }
   cursor: pointer;
   background: var(--surface);
 }
-.gallery-item img, .gallery-item video { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s var(--ease); }
+.gallery-item img, .gallery-item video {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform 0.5s var(--ease), opacity 0.3s var(--ease);
+  opacity: 0;
+}
+.gallery-item.media-loaded img, .gallery-item.media-loaded video { opacity: 1; }
 .gallery-item:hover img, .gallery-item:hover video { transform: scale(1.06); }
 .gallery-play-badge {
   position: absolute;
@@ -646,6 +652,33 @@ html[data-theme="savan"] .hero { background-color: var(--surface); }
   font-size: 1.1rem;
   pointer-events: none;
 }
+
+/* ── Loading spinner — shown over any photo/video slot until it finishes
+   loading, hidden automatically on load or on error (the error state
+   takes over instead). Used on gallery thumbnails, the hero images, and
+   the About photo. ───────────────────────────────────────────────── */
+.media-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  z-index: 1;
+  transition: opacity 0.25s var(--ease);
+}
+.media-spinner::after {
+  content: "";
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spinner-rotate 0.8s linear infinite;
+}
+.media-loaded .media-spinner,
+.media-error .media-spinner { opacity: 0; pointer-events: none; }
+@keyframes spinner-rotate { to { transform: rotate(360deg); } }
 
 .gallery-caption {
   position: absolute;
@@ -985,14 +1018,19 @@ html[data-theme="savan"] .site-footer { background: var(--surface); }
 }
 
 .form-top-actions {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 18px;
-  padding-bottom: 14px;
+  margin: -24px -24px 18px -24px;
+  padding: 18px 24px 14px;
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
+  box-shadow: 0 4px 10px -6px rgba(0,0,0,0.15);
 }
 .form-top-actions .btn-save { margin-top: 0; }
 

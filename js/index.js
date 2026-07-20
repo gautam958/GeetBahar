@@ -48,11 +48,16 @@ function renderGalleryPanel(panelId, items, kind) {
   panel.innerHTML = items.map((item, i) => {
     const url = resolveImageRef(item.filename);
     const thumb = kind === 'video'
-      ? `<video src="${url}" muted playsinline webkit-playsinline preload="metadata" onerror="this.closest('.gallery-item').classList.add('media-error')"></video><span class="gallery-play-badge">▶</span>`
-      : `<img src="${url}" alt="${escapeHtml(item.title || '')}" loading="lazy" onerror="this.closest('.gallery-item').classList.add('media-error')">`;
+      ? `<video src="${url}" muted playsinline webkit-playsinline preload="metadata"
+           onloadeddata="this.closest('.gallery-item').classList.add('media-loaded')"
+           onerror="this.closest('.gallery-item').classList.add('media-error')"></video><span class="gallery-play-badge">▶</span>`
+      : `<img src="${url}" alt="${escapeHtml(item.title || '')}" loading="lazy"
+           onload="this.closest('.gallery-item').classList.add('media-loaded')"
+           onerror="this.closest('.gallery-item').classList.add('media-error')">`;
     return `
       <div class="gallery-item" onclick="openMediaModal('${kind}', ${i})">
         ${thumb}
+        <div class="media-spinner"></div>
         <div class="gallery-error-note">Couldn't load this file — check the admin panel</div>
         <div class="gallery-caption">${escapeHtml(item.title || '')}</div>
       </div>
@@ -187,30 +192,44 @@ function applySiteConfig(site) {
 
   const mainRef = site.hero?.heroImage;
   if (mainRef) {
-    const img = document.getElementById('hero-main-img');
     const visual = document.getElementById('hero-visual');
-    img.src = resolveImageRef(mainRef);
-    img.style.display = 'block';
-    visual.classList.add('has-image');
+    loadImageWithSpinner('hero-main-img', 'hero-main-spinner', resolveImageRef(mainRef), () => visual.classList.add('has-image'));
   }
 
   const secRef = site.hero?.heroImageSecondary;
   if (secRef) {
     const wrap = document.getElementById('hero-secondary-image');
-    const img = document.getElementById('hero-secondary-img');
-    img.src = resolveImageRef(secRef);
-    img.style.display = 'block';
     wrap.classList.remove('empty');
+    loadImageWithSpinner('hero-secondary-img', 'hero-secondary-spinner', resolveImageRef(secRef));
   }
 }
 
 function applyPageContent(content) {
   const photoRef = content.about?.photo;
   if (photoRef) {
-    const img = document.getElementById('about-photo-img');
     const fallback = document.getElementById('about-photo-fallback');
-    img.src = resolveImageRef(photoRef);
-    img.style.display = 'block';
     if (fallback) fallback.style.display = 'none';
+    loadImageWithSpinner('about-photo-img', 'about-photo-spinner', resolveImageRef(photoRef));
   }
+}
+
+// Shows a spinner over an image slot while it loads, hides it on success,
+// and shows the same inline error treatment used elsewhere on failure —
+// used for the hero images and the About photo (gallery thumbnails have
+// their own version of this built directly into renderGalleryPanel).
+function loadImageWithSpinner(imgId, spinnerId, src, onLoad) {
+  const img = document.getElementById(imgId);
+  const spinner = document.getElementById(spinnerId);
+  if (!img) return;
+  if (spinner) spinner.style.display = 'flex';
+  img.style.display = 'block';
+  img.onload = () => {
+    if (spinner) spinner.style.display = 'none';
+    if (onLoad) onLoad();
+  };
+  img.onerror = () => {
+    if (spinner) spinner.style.display = 'none';
+    img.style.display = 'none';
+  };
+  img.src = src;
 }
