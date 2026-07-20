@@ -529,9 +529,7 @@ async function updateSubmissionStatus(id, status) {
 // ── Analytics ────────────────────────────────────────────────────────
 
 async function loadAnalytics() {
-  const analytics = await safeApiGet('analytics', { byDay: {}, byPath: {} });
-  const visitorsRaw = await safeApiGet('visitors', []);
-  const visitors = Array.isArray(visitorsRaw) ? visitorsRaw : (visitorsRaw.visitors || []);
+  const analytics = await safeApiGet('analytics', { views: {}, visitors: {} });
 
   if (analytics.__error) {
     document.getElementById('stat-views').textContent = '—';
@@ -541,18 +539,17 @@ async function loadAnalytics() {
     return;
   }
 
-  const totalViews = Object.values(analytics.byDay || {}).reduce((a, b) => a + b, 0);
-  const uniqueVisitors = visitors.length;
-  const repeat = visitors.filter(v => v.visitCount > 1).length;
+  const views = analytics.views || { total: 0 };
+  const visitors = analytics.visitors || { total: 0, new: 0, repeat: 0, recent: [] };
 
-  document.getElementById('stat-views').textContent = totalViews;
-  document.getElementById('stat-visitors').textContent = uniqueVisitors;
-  document.getElementById('stat-new').textContent = uniqueVisitors - repeat;
-  document.getElementById('stat-repeat').textContent = repeat;
+  document.getElementById('stat-views').textContent = views.total;
+  document.getElementById('stat-visitors').textContent = visitors.total;
+  document.getElementById('stat-new').textContent = visitors.newVisitors;
+  document.getElementById('stat-repeat').textContent = visitors.repeatVisitors;
 
-  renderDailyChart(analytics.byDay || {});
-  renderPagesChart(analytics.byPath || {});
-  renderVisitorsTable(visitors);
+  renderDailyChart(views.byDay || {});
+  renderPagesChart(views.byPath || {});
+  renderVisitorsTable(visitors.recent || []);
 }
 
 let dailyChart, pagesChart;
