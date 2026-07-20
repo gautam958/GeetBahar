@@ -494,3 +494,76 @@ the site correct regardless of exactly what's happening on the backend.
    under `?type=gallery` (it should be *replacing* the stored `photos`/
    `videos` arrays with what's POSTed, not appending the whole body as one
    entry).
+
+---
+
+## Update: Zero storage (no exceptions), and the actual mobile-vs-laptop investigation
+
+First, I want to be straight about something: sessionStorage genuinely
+could not have caused "shows on laptop, not on mobile" — it's per-device,
+your laptop's browser storage has no way to reach your phone. I should
+have said that more clearly earlier instead of just re-explaining the
+distinction each time. That said, you've asked repeatedly and I'd rather
+just remove it than keep relitigating it.
+
+### Every storage API removed — verified empty
+`authToken`, `visitorId`, `theme`, and `language` no longer touch
+`localStorage` or `sessionStorage` at all — not even session-scoped now.
+Real trade-offs from this, stated plainly:
+- **Admin sign-in no longer persists.** Reloading `admin.html` requires
+  signing in with Google again, every time. Confirmed in testing: sign in
+  → reload → back at the sign-in screen.
+- **Theme and language reset to default on every page load** — no memory
+  of your last choice.
+- **Analytics can no longer tell repeat visitors from new ones** — every
+  page load gets a fresh anonymous ID, since remembering it between visits
+  requires storing something on the device.
+
+Verified: `Object.keys(localStorage)` → `[]`, `Object.keys(sessionStorage)`
+→ `[]`, even after a full signed-in admin session.
+
+### The actual mobile investigation
+Since storage was never the real explanation, I looked for what
+genuinely could make the same live URL behave differently on two devices.
+Found two real candidates:
+
+**1. Stale cached JavaScript on your phone.** None of the script/CSS tags
+had any cache-busting — mobile Safari in particular can hold onto old
+cached files stubbornly, meaning your phone may have still been running
+JavaScript from *before* several of the fixes in this thread (including
+the original hardcoded-gallery bug from several updates ago). Added a
+version query string (`?v=20260719c`) to every local script and
+stylesheet tag, on both pages. I'll bump this number on every future
+change I hand you — **please do a genuine hard-refresh on your phone**
+after deploying this (in iOS Safari: Settings → Safari → Advanced →
+Website Data → find your site → remove it, since pull-to-refresh alone
+doesn't bypass the cache).
+
+**2. Missing `playsinline` on video thumbnails.** This is a real,
+concrete bug I found: iOS Safari specifically requires the `playsinline`
+attribute for a `<video>` element to render inline at all — without it,
+video can fail to show anything on iPhone while working completely
+normally on desktop Chrome. Both the public gallery thumbnails and the
+admin gallery grid were missing it. Fixed on both.
+
+**3. Gallery errors now show the real reason on-screen.** If the gallery
+still fails to load on mobile after this, you'll now see the actual error
+text directly in the photo/video tab (not just in a console you can't
+easily reach on a phone) — for example, tested it against a simulated
+total network failure and got: *"Could not load this right now. Failed to
+fetch"* shown right in the panel. If you see something like that on your
+phone, that tells us it's a live network/CORS issue rather than a stale
+cache — please share exactly what it says if it still happens.
+
+### Verified this round
+```
+localStorage after full admin session:   []
+sessionStorage after full admin session: []
+Sign in → reload → back at sign-in screen (persistence genuinely gone)
+
+Video thumbnail has playsinline: True
+Video thumbnail has muted: True
+
+Simulated total API failure → gallery panel shows real error text,
+not a blank space or generic unhelpful message
+```

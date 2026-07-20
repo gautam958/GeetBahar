@@ -21,24 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function signOut() {
-  sessionStorage.removeItem('authToken');
   authToken = null;
   location.reload();
 }
 
 // ── Google Sign-In ───────────────────────────────────────────────────
+//
+// No persistence at all: authToken lives only in the `let authToken`
+// variable above, for the lifetime of this page load. Reloading the page
+// requires signing in again with Google every time. That's a deliberate
+// trade-off for zero client storage of any kind — no exceptions, not even
+// session-scoped.
 
 function initGoogleSignIn() {
-  // An existing session should always win — even if GOOGLE_CLIENT_ID is
-  // missing right now, someone who already signed in earlier shouldn't get
-  // locked out of the panel they were just using.
-  const existing = sessionStorage.getItem('authToken');
-  if (existing) {
-    authToken = existing;
-    showAdminShell(parseJwtEmail(existing));
-    return;
-  }
-
   if (!window.IS_GOOGLE_CLIENT_ID_SET) {
     document.getElementById('google-signin-area').style.display = 'none';
     document.getElementById('signin-subtitle').innerHTML =
@@ -74,7 +69,6 @@ function waitForGoogleScript(attempt = 0) {
 
 function handleGoogleCredential(response) {
   authToken = response.credential;
-  sessionStorage.setItem('authToken', authToken);
   showAdminShell(parseJwtEmail(authToken));
 }
 
@@ -402,7 +396,7 @@ async function loadGallery() {
       <div class="admin-gallery-thumb">
         <span class="admin-gallery-badge">${item.kind === 'video' ? '🎬 Video' : '🖼️ Photo'}</span>
         ${item.kind === 'video'
-          ? `<video src="${resolveAdminImageRef(item.filename)}" muted onerror="this.closest('.admin-gallery-thumb').classList.add('media-error')"></video>`
+          ? `<video src="${resolveAdminImageRef(item.filename)}" muted playsinline webkit-playsinline preload="metadata" onerror="this.closest('.admin-gallery-thumb').classList.add('media-error')"></video>`
           : `<img src="${resolveAdminImageRef(item.filename)}" alt="${escAttr(item.title || '')}" onerror="this.closest('.admin-gallery-thumb').classList.add('media-error')">`}
         <div class="admin-gallery-error-note">Couldn't load — check this file's URL</div>
       </div>

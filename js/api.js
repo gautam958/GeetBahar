@@ -58,13 +58,18 @@ function flattenGalleryResponse(raw) {
   return { photos, videos };
 }
 
+// No persistence at all — a fresh id is generated on every page load. This
+// means analytics can no longer distinguish "repeat" from "new" visitors
+// across separate visits (that capability required storing something on
+// the visitor's device between visits, which is exactly what's being
+// removed here). Trade-off accepted per explicit instruction: zero client
+// storage of any kind, no exceptions.
+let currentVisitorId = null;
 function getOrCreateVisitorId() {
-  let id = sessionStorage.getItem('visitorId');
-  if (!id) {
-    id = 'visitor-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random());
-    sessionStorage.setItem('visitorId', id);
+  if (!currentVisitorId) {
+    currentVisitorId = 'visitor-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random());
   }
-  return id;
+  return currentVisitorId;
 }
 
 async function trackPageView(path = window.location.pathname) {

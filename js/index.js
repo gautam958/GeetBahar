@@ -25,17 +25,17 @@ async function renderGallery() {
     galleryData = flattenGalleryResponse(raw);
   } catch (e) {
     console.error('Could not load gallery:', e.message);
-    renderGalleryError('panel-photos');
-    renderGalleryError('panel-videos');
+    renderGalleryError('panel-photos', e.message);
+    renderGalleryError('panel-videos', e.message);
     return;
   }
   renderGalleryPanel('panel-photos', galleryData.photos || [], 'photo');
   renderGalleryPanel('panel-videos', galleryData.videos || [], 'video');
 }
 
-function renderGalleryError(panelId) {
+function renderGalleryError(panelId, detail) {
   const panel = document.getElementById(panelId);
-  if (panel) panel.innerHTML = `<div class="gallery-empty">Could not load this right now — please try again shortly.</div>`;
+  if (panel) panel.innerHTML = `<div class="gallery-empty">Could not load this right now.<br><small style="opacity:0.7;">${escapeHtml(detail || '')}</small></div>`;
 }
 
 function renderGalleryPanel(panelId, items, kind) {
@@ -48,7 +48,7 @@ function renderGalleryPanel(panelId, items, kind) {
   panel.innerHTML = items.map((item, i) => {
     const url = resolveImageRef(item.filename);
     const thumb = kind === 'video'
-      ? `<video src="${url}" muted preload="metadata" onerror="this.closest('.gallery-item').classList.add('media-error')"></video><span class="gallery-play-badge">▶</span>`
+      ? `<video src="${url}" muted playsinline webkit-playsinline preload="metadata" onerror="this.closest('.gallery-item').classList.add('media-error')"></video><span class="gallery-play-badge">▶</span>`
       : `<img src="${url}" alt="${escapeHtml(item.title || '')}" loading="lazy" onerror="this.closest('.gallery-item').classList.add('media-error')">`;
     return `
       <div class="gallery-item" onclick="openMediaModal('${kind}', ${i})">
