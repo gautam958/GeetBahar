@@ -636,3 +636,58 @@ happened) or a browser-level setting (some mobile browsers or extensions
 force certain links to open in a new tab regardless of the page's own
 code). Let me know if it persists after a clean reload and I'll dig
 further.
+
+---
+
+## Update: The real "0 visitors" bug, delete/upload spinners
+
+### Found the actual cause of the empty Analytics dashboard
+Real bug, and a clear one: the "Recent visitors" table (and the visitor
+stat cards) were calling `?type=visitors` — an endpoint that was **never
+in your backend's own documented list**. Cross-checked against the exact
+endpoint list your Function itself reports:
+```
+GET  ?type=config|content|rates|gallery|language_strings|themes
+GET  ?type=media&file=<name>
+DELETE ?type=gallery&id=<id>
+POST ?type=track_visitor (anonymous)
+GET  ?type=analytics (admin)
+...
+```
+There's only one analytics endpoint — `?type=analytics` — with no separate
+`visitors` type. My admin.js was calling one anyway, which very likely
+always failed quietly and produced an empty visitor list regardless of
+what the real analytics data looked like. Fixed: visitor detail is now
+read from *within* the analytics response itself (`analytics.visitors`),
+with the whole `visitors` call removed.
+
+**I don't yet know if this fully explains "Total Views: 0" too** — that
+number comes from `analytics.byDay`, a genuinely real/documented field,
+so if it's still zero after this fix, that points at `track_visitor`
+writes not landing on the backend, which I can't fix or fully diagnose
+from here.
+
+**To make this checkable without DevTools**, I added a "Show raw API
+response" section at the bottom of the Analytics tab — expand it and
+you'll see exactly what the backend sent back, in full. If Total Views is
+still 0 there, we'll know for certain it's a write-side (tracking) issue
+rather than a display bug. Please check this after deploying and let me
+know what it shows.
+
+### Delete/upload — added real progress feedback
+You're right that these gave no indication anything was happening. Fixed:
+- **Delete** now disables that specific button and shows "Deleting…"
+  immediately on click, restoring it only if something goes wrong.
+- **Upload** now shows a spinner and "Uploading…" over the whole upload
+  zone while the file is being sent, disabled from being clicked again
+  mid-upload.
+- **Switching to the Gallery tab** now shows a loading spinner while
+  fetching, instead of a blank or stale grid for a moment.
+
+None of this makes the actual network request faster — if your backend
+is genuinely slow, delete/upload will still take that long — but you'll
+now see exactly that it's working, not stalled.
+
+Verified: clicked Delete and caught the button mid-request showing
+"Deleting…", then confirmed the item was actually gone once the
+operation completed (not just visually removed early).

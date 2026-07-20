@@ -375,6 +375,7 @@ let cachedGallery = { photos: [], videos: [] };
 
 async function loadGallery() {
   const grid = document.getElementById('admin-gallery-grid');
+  grid.innerHTML = '<div class="grid-loading"><div class="upload-spinner"></div><p>Loading gallery…</p></div>';
   let raw;
   try {
     raw = await apiCall('gallery', 'GET', null, authToken);
@@ -403,7 +404,7 @@ async function loadGallery() {
       <div class="meta">
         <h4>${escapeHtmlAdmin(item.title || 'Untitled')}</h4>
         <small>${item.kind === 'video' ? 'Video' : 'Photo'}</small>
-        <button class="btn-delete" onclick="deleteGalleryItem('${item.kind}', '${item.id}')">Delete</button>
+        <button class="btn-delete" onclick="deleteGalleryItem('${item.kind}', '${item.id}', this)">Delete</button>
       </div>
     </div>
   `).join('');
@@ -428,6 +429,9 @@ function handleFileUpload(e) {
   const kind = currentUploadKind === 'video' ? 'videos' : 'photos';
   const title = file.name.replace(/\.[^.]+$/, '');
   const grid = document.getElementById('admin-gallery-grid');
+  const zone = document.getElementById('upload-zone');
+
+  setUploadZoneBusy(true, 'Uploading…');
 
   const reader = new FileReader();
   reader.onload = async () => {
@@ -442,21 +446,41 @@ function handleFileUpload(e) {
       // shape we just read — so this save can't add another layer of
       // nesting on top of whatever is already stored.
       await apiCall('gallery', 'POST', { photos: clean.photos, videos: clean.videos }, authToken);
-      loadGallery();
+      await loadGallery();
     } catch (err) {
       grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Upload failed — ${escapeHtmlAdmin(err.message)}</p>`);
+    } finally {
+      setUploadZoneBusy(false);
     }
+  };
+  reader.onerror = () => {
+    setUploadZoneBusy(false);
+    grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Could not read that file.</p>`);
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 }
 
-async function deleteGalleryItem(kind, id) {
+function setUploadZoneBusy(busy, label) {
+  const zone = document.getElementById('upload-zone');
+  if (!zone) return;
+  zone.classList.toggle('is-busy', busy);
+  zone.style.pointerEvents = busy ? 'none' : '';
+  if (busy) {
+    zone.dataset.originalHtml = zone.innerHTML;
+    zone.innerHTML = `<div class="upload-spinner"></div><p style="margin-top:12px;"><strong>${label}</strong></p>`;
+  } else if (zone.dataset.originalHtml) {
+    zone.innerHTML = zone.dataset.originalHtml;
+  }
+}
+
+async function deleteGalleryItem(kind, id, btn) {
   const key = kind === 'video' ? 'videos' : 'photos';
   const grid = document.getElementById('admin-gallery-grid');
+  if (btn) { btn.disabled = true; btn.classList.add('is-busy'); btn.textContent = 'Deleting…'; }
   try {
     await apiCall('gallery', 'DELETE', null, authToken, `&id=${encodeURIComponent(id)}`);
-    loadGallery();
+    await loadGallery();
   } catch (err) {
     // Some deployments don't support DELETE the same way — fall back to
     // writing a clean gallery object (from the already-recovered/flattened
@@ -465,8 +489,9 @@ async function deleteGalleryItem(kind, id) {
       const clean = { photos: [...(cachedGallery.photos || [])], videos: [...(cachedGallery.videos || [])] };
       clean[key] = clean[key].filter(item => item.id !== id);
       await apiCall('gallery', 'POST', clean, authToken);
-      loadGallery();
+      await loadGallery();
     } catch (err2) {
+      if (btn) { btn.disabled = false; btn.classList.remove('is-busy'); btn.textContent = 'Delete'; }
       grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Delete failed — ${escapeHtmlAdmin(err2.message)}</p>`);
     }
   }
@@ -527,29 +552,51 @@ async function updateSubmissionStatus(id, status) {
 }
 
 // ── Analytics ────────────────────────────────────────────────────────
+//
+// NOTE: there is only one real, documented endpoint here — GET
+// ?type=analytics. There is no separate ?type=visitors endpoint (it was
+// never in the backend's own documented list) — an earlier version of
+// this file called one anyway, which is why "Recent visitors" always
+// showed empty regardless of what analytics itself returned. Visitor
+// detail, if the backend provides it at all, is expected to live inside
+// the analytics response itself (e.g. analytics.visitors).
 
 async function loadAnalytics() {
-  const analytics = await safeApiGet('analytics', { views: {}, visitors: {} });
-
-  if (analytics.__error) {
+  const debugEl = document.getElementById('analytics-debug');
+  let analytics;
+  try {
+    analytics = await apiCall('analytics', 'GET', null, authToken);
+  } catch (e) {
     document.getElementById('stat-views').textContent = '—';
     document.getElementById('stat-visitors').textContent = '—';
     document.getElementById('stat-new').textContent = '—';
     document.getElementById('stat-repeat').textContent = '—';
+    if (debugEl) debugEl.textContent = 'Request failed: ' + e.message;
     return;
   }
 
-  const views = analytics.views || { total: 0 };
-  const visitors = analytics.visitors || { total: 0, new: 0, repeat: 0, recent: [] };
+  const visitors = Array.isArray(analytics.visitors) ? analytics.visitors : [];
+  const totalViews = Object.values(analytics.byDay || {}).reduce((a, b) => a + b, 0);
+  const uniqueVisitors = visitors.length;
+  const repeat = visitors.filter(v => v.visitCount > 1).length;
 
-  document.getElementById('stat-views').textContent = views.total;
-  document.getElementById('stat-visitors').textContent = visitors.total;
-  document.getElementById('stat-new').textContent = visitors.newVisitors;
-  document.getElementById('stat-repeat').textContent = visitors.repeatVisitors;
+  document.getElementById('stat-views').textContent = totalViews;
+  document.getElementById('stat-visitors').textContent = uniqueVisitors;
+  document.getElementById('stat-new').textContent = uniqueVisitors - repeat;
+  document.getElementById('stat-repeat').textContent = repeat;
 
-  renderDailyChart(views.byDay || {});
-  renderPagesChart(views.byPath || {});
-  renderVisitorsTable(visitors.recent || []);
+  renderDailyChart(analytics.byDay || {});
+  renderPagesChart(analytics.byPath || {});
+  renderVisitorsTable(visitors);
+
+  // Raw response, shown collapsed — the fastest way to see exactly what
+  // the backend actually sent back, without needing to open DevTools.
+  // If Total Views is 0 here too, that confirms track_visitor writes
+  // aren't landing (a backend question); if this shows real byDay data
+  // but the stat cards above still read 0, that would point at a bug in
+  // this rendering code instead — this view makes that distinction
+  // checkable at a glance.
+  if (debugEl) debugEl.textContent = JSON.stringify(analytics, null, 2);
 }
 
 let dailyChart, pagesChart;

@@ -1161,6 +1161,33 @@ html[data-theme="savan"] .site-footer { background: var(--surface); }
   margin-bottom: 28px;
 }
 .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.upload-zone.is-busy {
+  cursor: default;
+  border-style: solid;
+  border-color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.upload-spinner {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spinner-rotate 0.8s linear infinite;
+}
+.grid-loading {
+  grid-column: 1/-1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--text-soft);
+  font-family: var(--font-label);
+  font-size: 0.85rem;
+}
 
 .image-upload-field { margin-bottom: 20px; }
 .image-upload-zone {
@@ -1255,6 +1282,11 @@ html[data-theme="savan"] .site-footer { background: var(--surface); }
   font-size: 0.8rem;
   cursor: pointer;
 }
+.admin-gallery-card .btn-delete:disabled,
+.admin-gallery-card .btn-delete.is-busy {
+  opacity: 0.65;
+  cursor: default;
+}
 
 .filter-row { display: flex; gap: 10px; margin-bottom: 20px; }
 
@@ -1327,4 +1359,37 @@ html[data-theme="savan"] .stat-card { background: var(--surface); }
   .lang-toggle-btn { padding: 7px 12px; font-size: 0.78rem; }
   .hero { padding: 64px 0; }
   .hero-stats { gap: 20px; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   ADMIN — Debug/troubleshooting view
+   ───────────────────────────────────────────────────────────────────── */
+
+.debug-details {
+  margin-top: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  background: var(--surface);
+}
+.debug-details summary {
+  cursor: pointer;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+.debug-details pre {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--bg);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  max-height: 340px;
+  overflow-y: auto;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
