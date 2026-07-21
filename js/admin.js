@@ -416,12 +416,43 @@ function setUploadKind(kind) {
   currentUploadKind = kind;
   document.querySelectorAll('.upload-kind-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.kind === kind));
   document.getElementById('upload-kind-label').textContent = kind;
-  document.getElementById('file-input').setAttribute('accept', kind === 'video' ? 'video/*' : 'image/*');
+  document.getElementById('upload-format-hint').textContent = kind === 'video'
+    ? 'MP4 or MOV, up to 10 MB'
+    : 'JPG or PNG, up to 10 MB';
+  document.getElementById('file-input').setAttribute('accept', kind === 'video'
+    ? 'video/*,.mp4,.mov,.avi,.mkv,.webm'
+    : 'image/*,.jpg,.jpeg,.png,.gif,.webp');
+}
+
+// The accept attribute above is only a hint to the OS file picker — most
+// browsers still let someone choose "All Files" and pick anything
+// regardless. This catches an obvious mismatch after the fact (by file
+// extension, which is far more reliable than the browser's guessed MIME
+// type — the whole reason this manual Photo/Video toggle exists at all)
+// and asks for confirmation rather than silently filing it wrong.
+const VIDEO_EXTENSIONS = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp'];
+const PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic'];
+
+function detectMismatch(filename, selectedKind) {
+  const ext = (filename.split('.').pop() || '').toLowerCase();
+  if (selectedKind === 'photo' && VIDEO_EXTENSIONS.includes(ext)) return 'video';
+  if (selectedKind === 'video' && PHOTO_EXTENSIONS.includes(ext)) return 'photo';
+  return null;
 }
 
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  const looksLike = detectMismatch(file.name, currentUploadKind);
+  if (looksLike) {
+    const proceed = confirm(
+      `"${file.name}" looks like a ${looksLike}, but "${currentUploadKind === 'video' ? 'Video' : 'Photo'}" is selected above.\n\n` +
+      `Click OK to upload it as a ${currentUploadKind} anyway, or Cancel to switch the toggle first.`
+    );
+    if (!proceed) { e.target.value = ''; return; }
+  }
+
   // The person explicitly tells us photo vs video (see setUploadKind above) —
   // we don't rely on the browser's guessed MIME type here, since some phone
   // camera exports don't report a usable video/* type and were silently

@@ -691,3 +691,81 @@ now see exactly that it's working, not stalled.
 Verified: clicked Delete and caught the button mid-request showing
 "Deleting…", then confirmed the item was actually gone once the
 operation completed (not just visually removed early).
+
+---
+
+## Update: Found the real delete/corruption root cause — it's in the backend code
+
+Your screenshot gave me exactly what was needed: the actual console error
+and the actual raw stored JSON. That's concrete evidence, not guesswork,
+and it points to a specific bug in the **backend** `.csx` file I
+originally wrote for you (`geet-bahar.csx`), not something fixable from
+the frontend alone.
+
+### What the evidence showed
+- Console: `DELETE .../GeetBahar?code=... 404 (Not Found)`
+- Your pasted JSON: every `photos[i]` was a wrapper object containing a
+  whole previous gallery snapshot, not a flat item.
+
+### The actual bug
+In the original backend code, `POST ?type=gallery` was written to add
+**one single item** to a category array:
+```csharp
+string category = item.Value<string>("category") ?? "photos";
+var items = (JArray)(galleries[category] ?? (galleries[category] = new JArray()));
+items.Add(item);
+```
+But the frontend (built across many later iterations of this project)
+always sends the **entire** `{ photos: [...], videos: [...] }` object,
+expecting it to *replace* what's stored — not be treated as one item to
+append. Since that whole object has no `"category"` field, the backend
+defaulted it to `"photos"` and pushed the **entire object** as one more
+array element inside `galleries.photos[]`. Every single save from the
+admin panel wrapped the entire previous gallery state one layer deeper.
+That's exactly the nested structure in your screenshot.
+
+Knock-on effect: because real items end up buried inside nested wrapper
+objects instead of existing as top-level array entries, the old DELETE
+handler — which only searched the top level for a matching `id` — could
+never find anything to remove. That's the 404 in your console: it's not
+a routing problem, it's the delete logic correctly running and correctly
+finding nothing, because nothing real exists where it's looking anymore.
+
+### The fix
+Rewrote both handlers in `geet-bahar.csx`:
+- **POST** now replaces the stored `photos`/`videos` arrays outright with
+  whatever the request body contains — matching what the frontend
+  actually sends.
+- **DELETE** now searches the *entire* stored JSON recursively (not just
+  the top level) for a matching id, removes it, and writes back a clean
+  flat structure — which also means it can find and remove items from
+  your *already-corrupted* existing data, self-healing the file with
+  every delete going forward.
+
+**This needs to be deployed to your actual Azure Function** — I can't do
+that from here; whoever manages the Function App needs to update
+`geet-bahar.csx` with this corrected code and redeploy. The updated file
+is in this zip.
+
+**Honesty note:** I don't have a C# compiler available in this sandbox,
+so I could only verify the code structurally (balanced braces/brackets)
+and by careful manual review, not by actually compiling it. Please have
+it build-checked before relying on it in production. What I *can* say
+with confidence: my mock test backend has represented this exact
+"replace on POST, recursive find on DELETE" behavior all along (that's
+why my own tests never caught this bug — I was testing against the
+correct behavior, not your actual deployed one), so the existing,
+already-tested frontend code will work correctly once the real backend
+matches it.
+
+### Two smaller real fixes, same round
+1. **"Video available under Photo tab"** — you were pointing at the
+   upload zone's help text, which said "JPG/PNG... or MP4/MOV..."
+   regardless of which toggle was selected. It now shows only the
+   relevant formats for whichever button is active.
+2. **Added a soft warning** if the file you pick doesn't match the
+   selected toggle (checked by file extension, not the unreliable MIME
+   type) — asks you to confirm before proceeding, rather than silently
+   filing it wrong or blocking you outright. Verified: selected "Photo"
+   mode, picked a `.mp4` file, got a warning dialog, canceled it, and
+   confirmed nothing was uploaded.

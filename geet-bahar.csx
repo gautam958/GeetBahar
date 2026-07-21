@@ -189,7 +189,19 @@ public static async Task<IActionResult> Run(HttpRequest req, ILogger log)
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // type=gallery, POST — admin: add new gallery item
+    // type=gallery, POST — admin: REPLACE the stored photos/videos arrays
+    // with whatever is in the request body.
+    //
+    // IMPORTANT: the frontend always sends the FULL { photos: [...],
+    // videos: [...] } object on every save — never a single item to
+    // append. The previous version of this handler treated the entire
+    // posted body as one gallery item and pushed it onto galleries["photos"]
+    // (defaulting there since the posted object has no "category" field).
+    // That meant every single save wrapped the *entire previous gallery
+    // state* as one more nested array element, compounding on every
+    // upload — which is exactly the deeply-nested corruption you'd see if
+    // you fetched ?type=gallery directly. This version overwrites the
+    // stored arrays outright, which is what a "replace" POST should do.
     // ═════════════════════════════════════════════════════════════════════════
     if (type == "gallery" && isPost)
     {
@@ -198,24 +210,34 @@ public static async Task<IActionResult> Run(HttpRequest req, ILogger log)
             return CorsResult(new UnauthorizedObjectResult(new { error = auth.error }), responseOrigin);
 
         string body = await new StreamReader(req.Body).ReadToEndAsync();
-        JObject item;
-        try { item = JObject.Parse(body); }
+        JObject posted;
+        try { posted = JObject.Parse(body); }
         catch { return CorsResult(new BadRequestObjectResult(new { error = "Invalid JSON" }), responseOrigin); }
 
-        string category = item.Value<string>("category") ?? "photos";
-        string json = File.ReadAllText(fileMap["gallery"]);
-        JObject galleries = string.IsNullOrWhiteSpace(json) ? new JObject() : JObject.Parse(json);
-        
-        var items = (JArray)(galleries[category] ?? (galleries[category] = new JArray()));
-        items.Add(item);
+        var clean = new JObject
+        {
+            ["photos"] = posted["photos"] as JArray ?? new JArray(),
+            ["videos"] = posted["videos"] as JArray ?? new JArray()
+        };
 
-        File.WriteAllText(fileMap["gallery"], galleries.ToString(Formatting.Indented));
-        log.LogInformation($"Gallery item added by {auth.email}");
-        return CorsResult(new OkObjectResult(new { id = item.Value<string>("id") }), responseOrigin);
+        File.WriteAllText(fileMap["gallery"], clean.ToString(Formatting.Indented));
+        log.LogInformation($"Gallery replaced by {auth.email}: {((JArray)clean["photos"]).Count} photos, {((JArray)clean["videos"]).Count} videos");
+        return CorsResult(new OkObjectResult(new { status = "saved" }), responseOrigin);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // type=gallery, DELETE — admin: remove gallery item
+    // type=gallery, DELETE — admin: remove one item by id.
+    //
+    // Rewritten to search the ENTIRE stored JSON recursively (not just the
+    // top-level photos/videos arrays) — this matters because any data
+    // corrupted by the old POST bug above has real items buried inside
+    // nested wrapper objects, not at the top level, which is exactly why
+    // DELETE was always returning 404 "Item not found" even for items
+    // that were clearly visible in the admin panel (the panel recovers
+    // them via a similar recursive scan on the frontend). This version
+    // finds the item wherever it actually is, removes it, and writes back
+    // a clean flat structure — which also self-heals the stored data over
+    // time, since every delete now leaves a properly flat file behind.
     // ═════════════════════════════════════════════════════════════════════════
     if (type == "gallery" && isDelete)
     {
@@ -228,25 +250,58 @@ public static async Task<IActionResult> Run(HttpRequest req, ILogger log)
             return CorsResult(new BadRequestObjectResult(new { error = "Missing id parameter" }), responseOrigin);
 
         string json = File.ReadAllText(fileMap["gallery"]);
-        JObject galleries = string.IsNullOrWhiteSpace(json) ? new JObject() : JObject.Parse(json);
+        JToken root = string.IsNullOrWhiteSpace(json) ? new JObject() : JToken.Parse(json);
 
-        foreach (var category in new[] { "photos", "videos" })
+        var photos = new List<JObject>();
+        var videos = new List<JObject>();
+        var seenIds = new HashSet<string>();
+
+        void Walk(JToken node)
         {
-            var items = galleries[category] as JArray;
-            if (items != null)
+            if (node == null) return;
+            if (node.Type == JTokenType.Array)
             {
-                var toRemove = items.FirstOrDefault(i => i["id"]?.Value<string>() == id);
-                if (toRemove != null)
-                {
-                    items.Remove(toRemove);
-                    File.WriteAllText(fileMap["gallery"], galleries.ToString(Formatting.Indented));
-                    log.LogInformation($"Gallery item {id} deleted by {auth.email}");
-                    return CorsResult(new OkObjectResult(new { status = "deleted" }), responseOrigin);
-                }
+                foreach (var child in (JArray)node) Walk(child);
+                return;
             }
+            if (node.Type != JTokenType.Object) return;
+            var obj = (JObject)node;
+            string itemId = obj["id"]?.Value<string>();
+            string filename = obj["filename"]?.Value<string>();
+            if (itemId != null && filename != null)
+            {
+                // Leaf item (has both id and filename) — record it and
+                // don't recurse further into it.
+                if (seenIds.Add(itemId))
+                {
+                    if (itemId.StartsWith("video-")) videos.Add(obj);
+                    else photos.Add(obj);
+                }
+                return;
+            }
+            foreach (var prop in obj.Properties()) Walk(prop.Value);
+        }
+        Walk(root);
+
+        bool found = seenIds.Contains(id);
+        photos.RemoveAll(p => p["id"]?.Value<string>() == id);
+        videos.RemoveAll(v => v["id"]?.Value<string>() == id);
+
+        var clean = new JObject
+        {
+            ["photos"] = new JArray(photos),
+            ["videos"] = new JArray(videos)
+        };
+        File.WriteAllText(fileMap["gallery"], clean.ToString(Formatting.Indented));
+
+        if (!found)
+        {
+            log.LogWarning($"Gallery delete requested for unknown id {id} by {auth.email} — wrote cleaned-up data anyway");
+            return CorsResult(new NotFoundObjectResult(new { error = "Item not found" }), responseOrigin);
         }
 
-        return CorsResult(new NotFoundObjectResult(new { error = "Item not found" }), responseOrigin);
+        log.LogInformation($"Gallery item {id} deleted by {auth.email}");
+        return CorsResult(new OkObjectResult(new { status = "deleted" }), responseOrigin);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
