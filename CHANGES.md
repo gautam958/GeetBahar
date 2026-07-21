@@ -769,3 +769,59 @@ matches it.
    filing it wrong or blocking you outright. Verified: selected "Photo"
    mode, picked a `.mp4` file, got a warning dialog, canceled it, and
    confirmed nothing was uploaded.
+
+---
+
+## Update: Second upload broken (found it — my bug), multi-select, login persistence
+
+### "Second photo/video not uploaded until refresh" — found and fixed
+This was a real bug I introduced in the previous round's upload spinner.
+The spinner code replaced the *entire* upload zone's inner HTML while
+uploading — including the `<input type="file">` element sitting inside
+it. When the upload finished and the spinner was removed, the input
+element was rebuilt from an HTML string, which created a **brand new**
+DOM element. The "change" event listener that makes file selection
+actually do anything was only ever attached once, at page load, to the
+*original* input — the new one had no listener at all. So selecting a
+second file did nothing, silently, until a full page reload re-ran the
+setup code and attached a listener to a fresh original element again.
+
+Fixed by restructuring so the spinner only swaps a small inner content
+div — the `<input>` element and its listener are never touched, no
+matter how many times you upload.
+
+Verified with the literal reported sequence — upload, then upload again,
+then again:
+```
+Cards after 1st upload: 1
+Cards after 2nd upload: 2   (previously did nothing here)
+Cards after 3rd upload: 3
+```
+
+### "Can select multiple photos/videos" — added
+The file picker now accepts multiple files at once. They upload one at a
+time in sequence (not all at once — avoids two uploads racing to read
+and update the same gallery list simultaneously), with the progress label
+showing "Uploading 2 of 5…" etc. If any selected files look like they
+don't match the Photo/Video toggle, you get one combined warning listing
+all of them, instead of a separate popup per file. Verified: selected 2
+files in a single dialog, both landed correctly.
+
+### "Every refresh asks to log in again" — brought back session persistence
+You're right that this was real friction, not just an intentional
+trade-off worth keeping. The login token is now kept in `sessionStorage`
+— refreshing the page no longer signs you out. Two things worth knowing:
+- This is **not** the same as the "no client storage" fix from a few
+  rounds ago — that was about site *content* (gallery, text, rates) never
+  being cached client-side, which is unaffected and still true. A login
+  session is different from content data.
+- `sessionStorage` clears when you close the browser tab/window — so
+  you'll still need to sign in again after actually closing the browser,
+  just not on every refresh in between. Also added a check for the
+  token's own expiry (Google tokens expire after about an hour) so an old
+  stale token doesn't get reused and cause confusing failures — it's
+  cleared automatically and you're returned to the sign-in screen.
+
+Verified: signed in, checked storage (`localStorage: []`,
+`sessionStorage: ['authToken']`), reloaded the page, and the admin shell
+was still there without needing to sign in again.

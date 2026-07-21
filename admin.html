@@ -174,9 +174,11 @@
       </div>
 
       <div class="upload-zone" id="upload-zone">
-        <p><strong>Click to choose a <span id="upload-kind-label">photo</span></strong> or drag one here</p>
-        <p style="font-size:0.82rem;margin-top:6px;" id="upload-format-hint">JPG or PNG, up to 10 MB</p>
-        <input type="file" id="file-input" accept="image/*,video/*" style="display:none;">
+        <div class="upload-zone-content" id="upload-zone-content">
+          <p><strong>Click to choose <span id="upload-kind-label-plural">photos</span></strong> or drag them here — you can select several at once</p>
+          <p style="font-size:0.82rem;margin-top:6px;" id="upload-format-hint">JPG or PNG, up to 10 MB each</p>
+        </div>
+        <input type="file" id="file-input" accept="image/*,video/*" multiple style="display:none;">
       </div>
       <div class="admin-gallery-grid" id="admin-gallery-grid"></div>
     </div>

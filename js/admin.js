@@ -2,9 +2,11 @@
 //
 // Live mode only: Google Sign-In is required to reach the admin shell, and
 // every read/write goes through the real Azure Function API. There is no
-// local/demo fallback and no content data cached client-side — if a request
-// fails, the relevant section shows an inline error instead of silently
-// substituting fake content.
+// content data cached client-side — gallery, text, rates, etc. always come
+// fresh from the API, never from browser storage. The one exception is the
+// login session itself, kept in sessionStorage (see the Google Sign-In
+// section below) so a page refresh doesn't force signing in again — that's
+// a login token, not site content, and it's gone the moment the tab closes.
 
 let authToken = null;
 
@@ -22,18 +24,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function signOut() {
   authToken = null;
+  sessionStorage.removeItem('authToken');
   location.reload();
 }
 
 // ── Google Sign-In ───────────────────────────────────────────────────
 //
-// No persistence at all: authToken lives only in the `let authToken`
-// variable above, for the lifetime of this page load. Reloading the page
-// requires signing in again with Google every time. That's a deliberate
-// trade-off for zero client storage of any kind — no exceptions, not even
-// session-scoped.
+// The auth token is kept in sessionStorage — NOT localStorage — so it
+// survives a page refresh (fixing "asks to log in again every single
+// time I reload") but is gone the moment the browser tab/window closes.
+// This is the one exception to "no client storage" in this app: without
+// it, every refresh forces a fresh Google sign-in, which is real friction
+// for actually using the admin panel day to day. It does not affect the
+// bigger promise made earlier — that site *content* (gallery, text,
+// rates, etc.) always comes from the live API with zero client-side
+// caching — this is purely a login session, not content data.
 
 function initGoogleSignIn() {
+  const existing = sessionStorage.getItem('authToken');
+  if (existing && !isJwtExpired(existing)) {
+    authToken = existing;
+    showAdminShell(parseJwtEmail(existing));
+    return;
+  }
+  if (existing) sessionStorage.removeItem('authToken'); // expired — clear it
+
   if (!window.IS_GOOGLE_CLIENT_ID_SET) {
     document.getElementById('google-signin-area').style.display = 'none';
     document.getElementById('signin-subtitle').innerHTML =
@@ -69,7 +84,16 @@ function waitForGoogleScript(attempt = 0) {
 
 function handleGoogleCredential(response) {
   authToken = response.credential;
+  sessionStorage.setItem('authToken', authToken);
   showAdminShell(parseJwtEmail(authToken));
+}
+
+function isJwtExpired(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (!payload.exp) return false; // no expiry claim — treat as still valid
+    return Date.now() >= payload.exp * 1000;
+  } catch { return true; } // unparseable — treat as expired/invalid
 }
 
 function parseJwtEmail(token) {
@@ -415,10 +439,10 @@ let currentUploadKind = 'photo';
 function setUploadKind(kind) {
   currentUploadKind = kind;
   document.querySelectorAll('.upload-kind-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.kind === kind));
-  document.getElementById('upload-kind-label').textContent = kind;
+  document.getElementById('upload-kind-label-plural').textContent = kind === 'video' ? 'videos' : 'photos';
   document.getElementById('upload-format-hint').textContent = kind === 'video'
-    ? 'MP4 or MOV, up to 10 MB'
-    : 'JPG or PNG, up to 10 MB';
+    ? 'MP4 or MOV, up to 10 MB each'
+    : 'JPG or PNG, up to 10 MB each';
   document.getElementById('file-input').setAttribute('accept', kind === 'video'
     ? 'video/*,.mp4,.mov,.avi,.mkv,.webm'
     : 'image/*,.jpg,.jpeg,.png,.gif,.webp');
@@ -440,68 +464,89 @@ function detectMismatch(filename, selectedKind) {
   return null;
 }
 
-function handleFileUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+async function handleFileUpload(e) {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
 
-  const looksLike = detectMismatch(file.name, currentUploadKind);
-  if (looksLike) {
+  // One confirmation covering every mismatched file, instead of a
+  // separate popup per file — much less disruptive with several files
+  // selected at once.
+  const mismatched = files.filter(f => detectMismatch(f.name, currentUploadKind));
+  if (mismatched.length) {
+    const kindLabel = currentUploadKind === 'video' ? 'Video' : 'Photo';
+    const names = mismatched.map(f => `• ${f.name}`).join('\n');
     const proceed = confirm(
-      `"${file.name}" looks like a ${looksLike}, but "${currentUploadKind === 'video' ? 'Video' : 'Photo'}" is selected above.\n\n` +
-      `Click OK to upload it as a ${currentUploadKind} anyway, or Cancel to switch the toggle first.`
+      `${mismatched.length} file(s) don't look like they match "${kindLabel}", which is selected above:\n\n${names}\n\n` +
+      `Click OK to upload everything as ${currentUploadKind === 'video' ? 'videos' : 'photos'} anyway, or Cancel to review your selection.`
     );
     if (!proceed) { e.target.value = ''; return; }
   }
 
-  // The person explicitly tells us photo vs video (see setUploadKind above) —
-  // we don't rely on the browser's guessed MIME type here, since some phone
-  // camera exports don't report a usable video/* type and were silently
-  // being filed as photos.
   const kind = currentUploadKind === 'video' ? 'videos' : 'photos';
-  const title = file.name.replace(/\.[^.]+$/, '');
   const grid = document.getElementById('admin-gallery-grid');
-  const zone = document.getElementById('upload-zone');
 
-  setUploadZoneBusy(true, 'Uploading…');
-
-  const reader = new FileReader();
-  reader.onload = async () => {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const label = files.length > 1 ? `Uploading ${i + 1} of ${files.length}…` : 'Uploading…';
+    setUploadZoneBusy(true, label);
     try {
-      const media = await apiCall('media', 'POST', { filename: file.name, contentType: file.type, dataBase64: reader.result }, authToken);
-      const rawGallery = await apiCall('gallery', 'GET', null, authToken).catch(() => null);
-      const clean = flattenGalleryResponse(rawGallery);
-      const list = clean[kind] || [];
-      list.unshift({ id: generateId(kind === 'videos' ? 'video' : 'photo'), title, filename: media.filename, description: '' });
-      clean[kind] = list;
-      // Always POST a clean, flat {photos, videos} object — never the raw
-      // shape we just read — so this save can't add another layer of
-      // nesting on top of whatever is already stored.
-      await apiCall('gallery', 'POST', { photos: clean.photos, videos: clean.videos }, authToken);
-      await loadGallery();
+      await uploadOneGalleryFile(file, kind);
     } catch (err) {
-      grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Upload failed — ${escapeHtmlAdmin(err.message)}</p>`);
-    } finally {
-      setUploadZoneBusy(false);
+      grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Upload failed for "${escapeHtmlAdmin(file.name)}" — ${escapeHtmlAdmin(err.message)}</p>`);
     }
-  };
-  reader.onerror = () => {
-    setUploadZoneBusy(false);
-    grid.insertAdjacentHTML('afterbegin', `<p style="color:var(--vermilion);grid-column:1/-1;">Could not read that file.</p>`);
-  };
-  reader.readAsDataURL(file);
+  }
+
+  setUploadZoneBusy(false);
+  await loadGallery();
   e.target.value = '';
 }
 
+function uploadOneGalleryFile(file, kind) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const title = file.name.replace(/\.[^.]+$/, '');
+        const media = await apiCall('media', 'POST', { filename: file.name, contentType: file.type, dataBase64: reader.result }, authToken);
+        const rawGallery = await apiCall('gallery', 'GET', null, authToken).catch(() => null);
+        const clean = flattenGalleryResponse(rawGallery);
+        const list = clean[kind] || [];
+        list.unshift({ id: generateId(kind === 'videos' ? 'video' : 'photo'), title, filename: media.filename, description: '' });
+        clean[kind] = list;
+        // Always POST a clean, flat {photos, videos} object — never the
+        // raw shape we just read — so this save can't add another layer
+        // of nesting on top of whatever is already stored.
+        await apiCall('gallery', 'POST', { photos: clean.photos, videos: clean.videos }, authToken);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Only the inner content wrapper is swapped for the spinner — the <input>
+// element and the outer zone's click listener are never touched. An
+// earlier version replaced the whole zone's innerHTML here, which
+// destroyed and silently recreated the <input id="file-input"> element —
+// the new element had no "change" listener attached (that was only ever
+// bound once, at page load, to the original element), so selecting a
+// second file after the first upload did nothing until a full page
+// reload re-ran the setup code. That was the actual cause of "second
+// upload doesn't work."
 function setUploadZoneBusy(busy, label) {
   const zone = document.getElementById('upload-zone');
-  if (!zone) return;
+  const content = document.getElementById('upload-zone-content');
+  if (!zone || !content) return;
   zone.classList.toggle('is-busy', busy);
   zone.style.pointerEvents = busy ? 'none' : '';
   if (busy) {
-    zone.dataset.originalHtml = zone.innerHTML;
-    zone.innerHTML = `<div class="upload-spinner"></div><p style="margin-top:12px;"><strong>${label}</strong></p>`;
+    if (!zone.dataset.originalHtml) zone.dataset.originalHtml = content.innerHTML;
+    content.innerHTML = `<div class="upload-spinner"></div><p style="margin-top:12px;"><strong>${label}</strong></p>`;
   } else if (zone.dataset.originalHtml) {
-    zone.innerHTML = zone.dataset.originalHtml;
+    content.innerHTML = zone.dataset.originalHtml;
   }
 }
 
