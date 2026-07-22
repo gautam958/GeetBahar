@@ -185,6 +185,8 @@ async function loadSiteInfoForm() {
   document.getElementById('f-social-fb').value = data.social?.facebook || '';
   document.getElementById('f-social-ig').value = data.social?.instagram || '';
   document.getElementById('f-social-yt').value = data.social?.youtube || '';
+  document.getElementById('f-default-language').value = data.defaults?.language || 'hi';
+  document.getElementById('f-default-theme').value = data.defaults?.theme || 'light';
 
   imageState.heroMain = data.hero?.heroImage || '';
   imageState.heroSecondary = data.hero?.heroImageSecondary || '';
@@ -214,6 +216,10 @@ function collectSiteInfoForm() {
       facebook: document.getElementById('f-social-fb').value.trim(),
       instagram: document.getElementById('f-social-ig').value.trim(),
       youtube: document.getElementById('f-social-yt').value.trim()
+    },
+    defaults: {
+      language: document.getElementById('f-default-language').value,
+      theme: document.getElementById('f-default-theme').value
     }
   };
 }
@@ -637,6 +643,22 @@ async function updateSubmissionStatus(id, status) {
 // detail, if the backend provides it at all, is expected to live inside
 // the analytics response itself (e.g. analytics.visitors).
 
+// ── Analytics ────────────────────────────────────────────────────────
+//
+// Response shape, confirmed directly from the backend source
+// (geet-bahar.csx) rather than assumed:
+//   {
+//     views:    { total, byDay: {date: count}, byPath: {path: count} },
+//     visitors: { total, newVisitors, repeatVisitors,
+//                 byCountry: {...}, byCity: {...},
+//                 recent: [{ country, city, visitCount, lastVisit }] }
+//   }
+// An earlier version of this function expected a flatter shape
+// (analytics.byDay directly, analytics.visitors as an array) that never
+// matched what the backend actually sends — that mismatch, not a data or
+// tracking problem, is why every stat silently read as zero/empty
+// regardless of real traffic.
+
 async function loadAnalytics() {
   const debugEl = document.getElementById('analytics-debug');
   let analytics;
@@ -651,27 +673,21 @@ async function loadAnalytics() {
     return;
   }
 
-  const visitors = Array.isArray(analytics.visitors) ? analytics.visitors : [];
-  const totalViews = Object.values(analytics.byDay || {}).reduce((a, b) => a + b, 0);
-  const uniqueVisitors = visitors.length;
-  const repeat = visitors.filter(v => v.visitCount > 1).length;
+  const views = analytics.views || {};
+  const visitorStats = analytics.visitors || {};
+  const recentVisitors = Array.isArray(visitorStats.recent) ? visitorStats.recent : [];
 
-  document.getElementById('stat-views').textContent = totalViews;
-  document.getElementById('stat-visitors').textContent = uniqueVisitors;
-  document.getElementById('stat-new').textContent = uniqueVisitors - repeat;
-  document.getElementById('stat-repeat').textContent = repeat;
+  document.getElementById('stat-views').textContent = views.total ?? 0;
+  document.getElementById('stat-visitors').textContent = visitorStats.total ?? 0;
+  document.getElementById('stat-new').textContent = visitorStats.newVisitors ?? 0;
+  document.getElementById('stat-repeat').textContent = visitorStats.repeatVisitors ?? 0;
 
-  renderDailyChart(analytics.byDay || {});
-  renderPagesChart(analytics.byPath || {});
-  renderVisitorsTable(visitors);
+  renderDailyChart(views.byDay || {});
+  renderPagesChart(views.byPath || {});
+  renderVisitorsTable(recentVisitors);
 
   // Raw response, shown collapsed — the fastest way to see exactly what
   // the backend actually sent back, without needing to open DevTools.
-  // If Total Views is 0 here too, that confirms track_visitor writes
-  // aren't landing (a backend question); if this shows real byDay data
-  // but the stat cards above still read 0, that would point at a bug in
-  // this rendering code instead — this view makes that distinction
-  // checkable at a glance.
   if (debugEl) debugEl.textContent = JSON.stringify(analytics, null, 2);
 }
 
@@ -743,7 +759,7 @@ function renderVisitorsTable(visitors) {
   tbody.innerHTML = visitors.length
     ? visitors.map(v => `
         <tr>
-          <td>${escapeHtmlAdmin(v.city || '')}, ${escapeHtmlAdmin(v.state || v.country || '')}</td>
+          <td>${escapeHtmlAdmin(v.city || 'Unknown')}, ${escapeHtmlAdmin(v.country || 'Unknown')}</td>
           <td>${v.visitCount}</td>
           <td>${new Date(v.lastVisit).toLocaleDateString()}</td>
         </tr>

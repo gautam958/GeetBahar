@@ -325,7 +325,12 @@ html[data-theme="savan"] .hero { background-color: var(--surface); }
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
   gap: 56px;
-  align-items: center;
+  align-items: stretch;
+}
+
+.hero-text {
+  display: flex;
+  flex-direction: column;
 }
 
 .hero-eyebrow {
@@ -419,15 +424,16 @@ html[data-theme="savan"] .hero { background-color: var(--surface); }
 .hero-substrip {
   display: flex;
   align-items: flex-end;
-  gap: 24px;
-  margin-top: 44px;
+  gap: 28px;
+  margin-top: auto;
+  padding-top: 36px;
   flex-wrap: wrap;
 }
 
 .hero-secondary-image {
   position: relative;
-  width: 148px;
-  aspect-ratio: 4/5;
+  width: min(260px, 100%);
+  aspect-ratio: 6/5;
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);

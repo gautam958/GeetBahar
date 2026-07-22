@@ -776,8 +776,18 @@ private static async Task<(string country, string state, string city)> LookupGeo
     if (string.IsNullOrEmpty(ip) || ip == "::1" || ip.StartsWith("127.") || ip.StartsWith("10.") || ip.StartsWith("192.168.") || ip == "Unknown")
         return ("Unknown", "Unknown", "Unknown");
 
-    if (ip.Contains(":"))
-        ip = ip.Split(":")[0];
+    if (ip.Count(c => c == ':') == 1)
+        ip = ip.Split(':')[0]; // strip a port from "ipv4:port" — an IPv6
+                                // address has multiple colons and must be
+                                // left as-is, or the lookup below silently
+                                // fails for it every time (this previously
+                                // took only the first ':'-separated chunk of
+                                // ANY address, mangling every IPv6 client's
+                                // address into garbage before it ever
+                                // reached ip-api.com — a likely real cause
+                                // of "Unknown" city/state/country for a lot
+                                // of real visitors, especially on mobile
+                                // carriers that are IPv6-only).
 
     try
     {

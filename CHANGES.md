@@ -825,3 +825,62 @@ trade-off worth keeping. The login token is now kept in `sessionStorage`
 Verified: signed in, checked storage (`localStorage: []`,
 `sessionStorage: ['authToken']`), reloaded the page, and the admin shell
 was still there without needing to sign in again.
+
+---
+
+## Update: Hero layout, the REAL analytics bug, GeoIP fix, default language/theme
+
+### Hero image layout — matched to your reference
+Made the secondary image significantly larger and landscape-proportioned
+(was a small 148px portrait box, now scales up to 260px, wider than tall)
+and changed the column layout so both the text column and the main hero
+image column stretch to equal height, with the stats+secondary-image row
+pinned to the bottom of that shared height via `margin-top: auto`.
+Result: the secondary image's bottom edge and the main hero image's
+bottom edge land on the same line automatically, by layout, regardless of
+how much hero copy is above it — not a hardcoded pixel match. Verified:
+measured both bottom edges after loading real images — 0px difference.
+
+### The actual analytics bug — found by reading the real backend code
+Last round's "fix" was a guess at the response shape, and it was wrong.
+Reading the actual `geet-bahar.csx` this time, the real shape is:
+```
+{
+  views:    { total, byDay: {...}, byPath: {...} },
+  visitors: { total, newVisitors, repeatVisitors, byCountry, byCity, recent: [...] }
+}
+```
+My frontend was reading `analytics.byDay` (should be `analytics.views.byDay`)
+and treating `analytics.visitors` as an array (it's an object; the array
+is at `analytics.visitors.recent`). That mismatch — not a tracking
+problem — is why every number showed 0/empty regardless of real traffic.
+Rewrote `loadAnalytics()` to match the real, source-verified shape.
+Verified against a mock matching this exact shape: Total Views 25,
+Unique Visitors 1, visitor table showing "Deoghar, India" correctly.
+
+### GeoIP bug found in the backend, while I was in there
+You asked me to check the IP→city/state/country logic specifically —
+found a real bug. The code stripped a port number from the client IP like
+this: `if (ip.Contains(":")) ip = ip.Split(":")[0];` — but an **IPv6
+address contains multiple colons as part of the address itself**. For any
+visitor on IPv6 (common on mobile carriers especially), this mangled
+their real address down to its first colon-separated chunk — garbage that
+the geolocation lookup would always fail on, silently storing "Unknown"
+for city/state/country. Fixed to only strip a port when there's exactly
+one colon (a real "ipv4:port" pattern), leaving IPv6 addresses intact.
+This needs the same backend redeploy as the earlier gallery fix.
+
+### New: Default language & theme, set from the admin
+Added to Admin → Content → "Contact & hero": dropdowns for **Default
+language** (Hindi/English) and **Default theme** (Light/Dark/Savan).
+Once saved, new visitors to the homepage see your chosen default —
+verified by setting it to English + Savan in admin, then loading the
+public page fresh and confirming both landed correctly (`data-theme:
+savan`, `lang: en`, EN toggle showing active).
+
+One deliberate detail: if someone clicks the language or theme toggle
+themselves, their choice always wins for that page view, even if it
+happens to be checked a fraction of a second before the admin default
+finishes loading — verified this specifically with a race-condition test
+(clicked "Hindi" almost immediately on page load, before the config
+fetch could resolve with an "English" default, and Hindi correctly stuck).

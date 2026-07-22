@@ -21,7 +21,7 @@ function setTheme(name) {
   if (sel) sel.value = name;
 }
 
-function changeTheme(name) { setTheme(name); }
+function changeTheme(name) { window.userSetTheme = true; setTheme(name); }
 
 // ── Language ───────────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ function setLanguage(code) {
   applyTranslations(code);
 }
 
-function changeLanguage(code) { setLanguage(code); }
+function changeLanguage(code) { window.userSetLanguage = true; setLanguage(code); }
 
 function applyTranslations(lang) {
   const dict = (window.I18N_DATA && window.I18N_DATA[lang]) || {};

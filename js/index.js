@@ -202,6 +202,21 @@ function applySiteConfig(site) {
     wrap.classList.remove('empty');
     loadImageWithSpinner('hero-secondary-img', 'hero-secondary-spinner', resolveImageRef(secRef));
   }
+
+  // Admin-configured site defaults for language/theme — applied only if
+  // the visitor hasn't already clicked the toggle themselves during this
+  // page view (that flag is set in app.js's changeLanguage/changeTheme,
+  // which only fire on an actual click, never on the initial programmatic
+  // setup). This fetch is async and the initial paint already happened
+  // using js/config.js's DEFAULT_LANGUAGE/DEFAULT_THEME, so this can
+  // still visibly switch the page shortly after load if the admin's
+  // configured default differs from that fallback.
+  if (site.defaults?.language && !window.userSetLanguage) {
+    setLanguage(site.defaults.language);
+  }
+  if (site.defaults?.theme && !window.userSetTheme) {
+    setTheme(site.defaults.theme);
+  }
 }
 
 function applyPageContent(content) {
